@@ -1,16 +1,17 @@
-import { useParams } from "react-router-dom";
+import React from "react";
+import Card from "../../../components/ui/Card";
 
 const CentreAppointmentsPage: React.FC = () => {
-  const { centreId } = useParams();
-
   return (
-    <div className="space-y-4">
-      <h2 className="text-base font-semibold text-white">
-        Centre Appointments – {centreId}
-      </h2>
-      <p className="text-sm text-slate-400">
-        List of appointments for this centre will be shown here.
-      </p>
+    <div className="space-y-6">
+      <Card>
+        <h2 className="text-xl font-semibold text-white mb-4">
+          Centre Appointments
+        </h2>
+        <p className="text-slate-400">
+          Centre appointments view coming soon...
+        </p>
+      </Card>
     </div>
   );
 };

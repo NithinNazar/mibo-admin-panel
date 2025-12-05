@@ -6,18 +6,23 @@ interface SidebarItemProps {
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({ item }) => {
+  const Icon = item.icon;
+
   return (
     <NavLink
       to={item.path}
       className={({ isActive }) =>
         [
-          "block px-3 py-2 rounded-xl text-sm font-medium transition-colors",
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
           "text-slate-300 hover:text-white hover:bg-white/10",
-          isActive ? "bg-white/10 text-white" : "",
+          isActive
+            ? "bg-miboTeal/20 text-miboTeal border-l-2 border-miboTeal"
+            : "",
         ].join(" ")
       }
     >
-      {item.label}
+      {Icon && <Icon size={18} />}
+      <span>{item.label}</span>
     </NavLink>
   );
 };

@@ -1,12 +1,257 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../contexts/AuthContext";
+import Card from "../../../components/ui/Card";
+import Button from "../../../components/ui/Button";
+import Input from "../../../components/ui/Input";
+import { Phone, Lock, User, KeyRound } from "lucide-react";
+import toast from "react-hot-toast";
+
+type AuthMethod = "phone-otp" | "phone-password" | "username-password";
+
 const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { login, sendOTP } = useAuth();
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("phone-password");
+  const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+
+  // Form states
+  const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+
+  const handleSendOTP = async () => {
+    if (!phone) {
+      toast.error("Please enter phone number");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendOTP(phone);
+      setOtpSent(true);
+      toast.success("OTP sent successfully!");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (authMethod === "phone-otp") {
+        if (!phone || !otp) {
+          toast.error("Please enter phone number and OTP");
+          return;
+        }
+        await login({ method: "phone-otp", phone, otp });
+      } else if (authMethod === "phone-password") {
+        if (!phone || !password) {
+          toast.error("Please enter phone number and password");
+          return;
+        }
+        await login({ method: "phone-password", phone, password });
+      } else {
+        if (!username || !password) {
+          toast.error("Please enter username and password");
+          return;
+        }
+        await login({ method: "username-password", username, password });
+      }
+
+      toast.success("Login successful!");
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-miboBg">
-      <div className="w-full max-w-md bg-[#1d2635] rounded-2xl shadow-xl border border-white/5 p-6 space-y-4">
-        <h1 className="text-xl font-semibold text-white">Mibo Admin Login</h1>
-        <p className="text-sm text-slate-400">
-          Phone + OTP login will be implemented here.
+    <div className="min-h-screen bg-miboBg flex items-center justify-center p-4">
+      <Card className="w-full max-w-md" padding="lg">
+        {/* Logo and Title */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-miboTeal to-miboDeepBlue flex items-center justify-center mb-4">
+            <span className="text-white font-bold text-2xl">M</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white">Mibo Care Admin</h1>
+          <p className="text-slate-400 text-sm mt-2">Sign in to your account</p>
+        </div>
+
+        {/* Auth Method Tabs */}
+        <div className="flex gap-2 mb-6 p-1 bg-white/5 rounded-lg">
+          <button
+            onClick={() => {
+              setAuthMethod("phone-password");
+              setOtpSent(false);
+            }}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+              authMethod === "phone-password"
+                ? "bg-miboTeal text-white"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Phone + Password
+          </button>
+          <button
+            onClick={() => {
+              setAuthMethod("phone-otp");
+              setOtpSent(false);
+            }}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+              authMethod === "phone-otp"
+                ? "bg-miboTeal text-white"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Phone + OTP
+          </button>
+          <button
+            onClick={() => {
+              setAuthMethod("username-password");
+              setOtpSent(false);
+            }}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+              authMethod === "username-password"
+                ? "bg-miboTeal text-white"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Username
+          </button>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Phone + OTP Method */}
+          {authMethod === "phone-otp" && (
+            <>
+              <Input
+                label="Phone Number"
+                type="tel"
+                placeholder="+91 9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                icon={<Phone size={18} />}
+                disabled={otpSent}
+              />
+              {!otpSent ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={handleSendOTP}
+                  loading={loading}
+                >
+                  Send OTP
+                </Button>
+              ) : (
+                <>
+                  <Input
+                    label="OTP"
+                    type="text"
+                    placeholder="Enter 6-digit OTP"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    maxLength={6}
+                    icon={<KeyRound size={18} />}
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-full"
+                    size="lg"
+                    loading={loading}
+                  >
+                    Sign In
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setOtpSent(false)}
+                    className="text-sm text-miboTeal hover:underline w-full text-center"
+                  >
+                    Change phone number
+                  </button>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Phone + Password Method */}
+          {authMethod === "phone-password" && (
+            <>
+              <Input
+                label="Phone Number"
+                type="tel"
+                placeholder="+91 9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                icon={<Phone size={18} />}
+              />
+              <Input
+                label="Password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                icon={<Lock size={18} />}
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                size="lg"
+                loading={loading}
+              >
+                Sign In
+              </Button>
+            </>
+          )}
+
+          {/* Username + Password Method */}
+          {authMethod === "username-password" && (
+            <>
+              <Input
+                label="Username"
+                type="text"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                icon={<User size={18} />}
+              />
+              <Input
+                label="Password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                icon={<Lock size={18} />}
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                size="lg"
+                loading={loading}
+              >
+                Sign In
+              </Button>
+            </>
+          )}
+        </form>
+
+        <p className="text-center text-xs text-slate-500 mt-6">
+          Protected by JWT authentication
         </p>
-      </div>
+      </Card>
     </div>
   );
 };

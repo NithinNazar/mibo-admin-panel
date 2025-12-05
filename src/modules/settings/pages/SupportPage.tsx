@@ -1,10 +1,13 @@
+import React from "react";
+import Card from "../../../components/ui/Card";
+
 const SupportPage: React.FC = () => {
   return (
-    <div className="space-y-4">
-      <h2 className="text-base font-semibold text-white">Support</h2>
-      <p className="text-sm text-slate-400">
-        Support contacts and escalation paths will be shown here.
-      </p>
+    <div className="space-y-6">
+      <Card>
+        <h2 className="text-xl font-semibold text-white mb-4">Support</h2>
+        <p className="text-slate-400">Support page coming soon...</p>
+      </Card>
     </div>
   );
 };
