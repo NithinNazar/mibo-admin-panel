@@ -8,7 +8,8 @@ import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import { Plus, Search, Edit, Eye, User, Phone, Mail } from "lucide-react";
 import toast from "react-hot-toast";
-import patientService, {
+import patientService from "../../../services/patientService";
+import type {
   CreatePatientRequest,
   UpdatePatientRequest,
 } from "../../../services/patientService";
@@ -135,7 +136,7 @@ const PatientsListPage: React.FC = () => {
   const columns = [
     {
       key: "name",
-      label: "Patient",
+      header: "Patient",
       render: (patient: Patient) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-miboTeal/20 flex items-center justify-center">
@@ -156,7 +157,7 @@ const PatientsListPage: React.FC = () => {
     },
     {
       key: "contact",
-      label: "Contact",
+      header: "Contact",
       render: (patient: Patient) => (
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-slate-300">
@@ -174,7 +175,7 @@ const PatientsListPage: React.FC = () => {
     },
     {
       key: "gender",
-      label: "Gender",
+      header: "Gender",
       render: (patient: Patient) => (
         <span className="text-slate-300 capitalize">
           {patient.gender || "Not specified"}
@@ -183,14 +184,14 @@ const PatientsListPage: React.FC = () => {
     },
     {
       key: "bloodGroup",
-      label: "Blood Group",
+      header: "Blood Group",
       render: (patient: Patient) => (
         <span className="text-slate-300">{patient.bloodGroup || "N/A"}</span>
       ),
     },
     {
       key: "status",
-      label: "Status",
+      header: "Status",
       render: (patient: Patient) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -205,7 +206,7 @@ const PatientsListPage: React.FC = () => {
     },
     {
       key: "actions",
-      label: "Actions",
+      header: "Actions",
       render: (patient: Patient) => (
         <div className="flex gap-2">
           <Button
@@ -270,7 +271,11 @@ const PatientsListPage: React.FC = () => {
               : "No patients found. Add your first patient to get started."}
           </div>
         ) : (
-          <Table columns={columns} data={filteredPatients} />
+          <Table
+            columns={columns}
+            data={filteredPatients}
+            keyExtractor={(p) => p.id}
+          />
         )}
       </Card>
 

@@ -24,30 +24,39 @@ const DashboardPage: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+
+      // Set a timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 5000)
+      );
+
+      const dataPromise = Promise.all([
+        analyticsService.getDashboardMetrics(),
+        analyticsService.getTopDoctors(),
+        analyticsService.getRevenueData("month"),
+        analyticsService.getLeadsBySource(),
+      ]);
+
       const [metricsData, doctorsData, revenueDataRes, leadsDataRes] =
-        await Promise.all([
-          analyticsService.getDashboardMetrics(),
-          analyticsService.getTopDoctors(),
-          analyticsService.getRevenueData("month"),
-          analyticsService.getLeadsBySource(),
-        ]);
+        (await Promise.race([dataPromise, timeoutPromise])) as any;
 
       setMetrics(metricsData);
       setTopDoctorsData(doctorsData);
       setRevenueChartData(revenueDataRes);
       setLeadsChartData(leadsDataRes);
     } catch (error: any) {
-      toast.error("Failed to fetch dashboard data");
+      console.error("Dashboard data fetch error:", error);
+      toast.error("Using demo data - backend not connected");
       // Set fallback data
       setMetrics({
-        totalPatients: 0,
-        totalPatientsChange: 0,
-        activeDoctors: 0,
-        activeDoctorsChange: 0,
-        followUpsBooked: 0,
-        followUpsBookedChange: 0,
-        totalRevenue: 0,
-        totalRevenueChange: 0,
+        totalPatients: 11238,
+        totalPatientsChange: 45,
+        activeDoctors: 238,
+        activeDoctorsChange: 21,
+        followUpsBooked: 182,
+        followUpsBookedChange: 12,
+        totalRevenue: 1643205,
+        totalRevenueChange: 32,
       });
       setTopDoctorsData(fallbackTopDoctors);
       setRevenueChartData(fallbackRevenueData);

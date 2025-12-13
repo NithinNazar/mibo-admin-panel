@@ -7,7 +7,8 @@ import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import { Plus, Edit, Trash2, MapPin, Phone } from "lucide-react";
 import toast from "react-hot-toast";
-import centreService, {
+import centreService from "../../../services/centreService";
+import type {
   CreateCentreRequest,
   UpdateCentreRequest,
 } from "../../../services/centreService";
@@ -121,7 +122,7 @@ const CentresPage: React.FC = () => {
   const columns = [
     {
       key: "name",
-      label: "Centre Name",
+      header: "Centre Name",
       render: (centre: Centre) => (
         <div>
           <div className="font-medium text-white">{centre.name}</div>
@@ -131,7 +132,7 @@ const CentresPage: React.FC = () => {
     },
     {
       key: "address",
-      label: "Address",
+      header: "Address",
       render: (centre: Centre) => (
         <div className="flex items-start gap-2">
           <MapPin size={16} className="text-slate-400 mt-1 flex-shrink-0" />
@@ -141,7 +142,7 @@ const CentresPage: React.FC = () => {
     },
     {
       key: "phone",
-      label: "Contact",
+      header: "Contact",
       render: (centre: Centre) => (
         <div className="flex items-center gap-2">
           <Phone size={16} className="text-slate-400" />
@@ -151,7 +152,7 @@ const CentresPage: React.FC = () => {
     },
     {
       key: "status",
-      label: "Status",
+      header: "Status",
       render: (centre: Centre) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -166,7 +167,7 @@ const CentresPage: React.FC = () => {
     },
     {
       key: "actions",
-      label: "Actions",
+      header: "Actions",
       render: (centre: Centre) => (
         <div className="flex gap-2">
           <Button
@@ -211,7 +212,7 @@ const CentresPage: React.FC = () => {
             No centres found. Add your first centre to get started.
           </div>
         ) : (
-          <Table columns={columns} data={centres} />
+          <Table columns={columns} data={centres} keyExtractor={(c) => c.id} />
         )}
       </Card>
 
