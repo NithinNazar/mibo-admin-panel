@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { Users, Stethoscope, Calendar, IndianRupee } from "lucide-react";
 import StatCard from "../../../components/charts/StatCard";
 import DonutChart from "../../../components/charts/DonutChart";
@@ -5,48 +6,66 @@ import AreaChartComponent from "../../../components/charts/AreaChartComponent";
 import TopDoctorsCard from "../../../components/charts/TopDoctorsCard";
 import Card from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
+import toast from "react-hot-toast";
+import analyticsService from "../../../services/analyticsService";
+import type { DashboardMetrics } from "../../../types";
 
 const DashboardPage: React.FC = () => {
-  // Mock data - will be replaced with real API data
-  const stats = [
-    {
-      title: "Total Patients",
-      value: "11,238",
-      icon: Users,
-      trend: { value: 45, direction: "up" as const, period: "this month" },
-      iconColor: "text-blue-400",
-    },
-    {
-      title: "Active Doctors",
-      value: "238",
-      icon: Stethoscope,
-      trend: { value: 21, direction: "up" as const, period: "this month" },
-      iconColor: "text-miboTeal",
-    },
-    {
-      title: "Follow Ups Booked",
-      value: "182",
-      icon: Calendar,
-      trend: { value: 12, direction: "up" as const, period: "this month" },
-      iconColor: "text-yellow-400",
-    },
-    {
-      title: "Total Revenue",
-      value: "₹16,43,205",
-      icon: IndianRupee,
-      trend: { value: 32, direction: "up" as const, period: "this month" },
-      iconColor: "text-green-400",
-    },
-  ];
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [topDoctorsData, setTopDoctorsData] = useState<any[]>([]);
+  const [revenueChartData, setRevenueChartData] = useState<any[]>([]);
+  const [leadsChartData, setLeadsChartData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const leadsData = [
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [metricsData, doctorsData, revenueDataRes, leadsDataRes] =
+        await Promise.all([
+          analyticsService.getDashboardMetrics(),
+          analyticsService.getTopDoctors(),
+          analyticsService.getRevenueData("month"),
+          analyticsService.getLeadsBySource(),
+        ]);
+
+      setMetrics(metricsData);
+      setTopDoctorsData(doctorsData);
+      setRevenueChartData(revenueDataRes);
+      setLeadsChartData(leadsDataRes);
+    } catch (error: any) {
+      toast.error("Failed to fetch dashboard data");
+      // Set fallback data
+      setMetrics({
+        totalPatients: 0,
+        totalPatientsChange: 0,
+        activeDoctors: 0,
+        activeDoctorsChange: 0,
+        followUpsBooked: 0,
+        followUpsBookedChange: 0,
+        totalRevenue: 0,
+        totalRevenueChange: 0,
+      });
+      setTopDoctorsData(fallbackTopDoctors);
+      setRevenueChartData(fallbackRevenueData);
+      setLeadsChartData(fallbackLeadsData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fallback data
+  const fallbackLeadsData = [
     { label: "Website", value: 400, color: "#3b82f6" },
     { label: "Phone", value: 300, color: "#2CA5A9" },
     { label: "Direct", value: 300, color: "#f59e0b" },
     { label: "Referrals", value: 200, color: "#8b5cf6" },
   ];
 
-  const revenueData = [
+  const fallbackRevenueData = [
     { date: "Jan", value: 12000 },
     { date: "Feb", value: 19000 },
     { date: "Mar", value: 15000 },
@@ -55,7 +74,7 @@ const DashboardPage: React.FC = () => {
     { date: "Jun", value: 30000 },
   ];
 
-  const topDoctors = [
+  const fallbackTopDoctors = [
     {
       id: "1",
       name: "Dr. Elvia Thomas",
@@ -86,11 +105,76 @@ const DashboardPage: React.FC = () => {
     },
   ];
 
+  const stats = metrics
+    ? [
+        {
+          title: "Total Patients",
+          value: metrics.totalPatients.toLocaleString(),
+          icon: Users,
+          trend: {
+            value: metrics.totalPatientsChange,
+            direction: (metrics.totalPatientsChange >= 0 ? "up" : "down") as
+              | "up"
+              | "down",
+            period: "this month",
+          },
+          iconColor: "text-blue-400",
+        },
+        {
+          title: "Active Doctors",
+          value: metrics.activeDoctors.toString(),
+          icon: Stethoscope,
+          trend: {
+            value: metrics.activeDoctorsChange,
+            direction: (metrics.activeDoctorsChange >= 0 ? "up" : "down") as
+              | "up"
+              | "down",
+            period: "this month",
+          },
+          iconColor: "text-miboTeal",
+        },
+        {
+          title: "Follow Ups Booked",
+          value: metrics.followUpsBooked.toString(),
+          icon: Calendar,
+          trend: {
+            value: metrics.followUpsBookedChange,
+            direction: (metrics.followUpsBookedChange >= 0 ? "up" : "down") as
+              | "up"
+              | "down",
+            period: "this month",
+          },
+          iconColor: "text-yellow-400",
+        },
+        {
+          title: "Total Revenue",
+          value: `₹${metrics.totalRevenue.toLocaleString()}`,
+          icon: IndianRupee,
+          trend: {
+            value: metrics.totalRevenueChange,
+            direction: (metrics.totalRevenueChange >= 0 ? "up" : "down") as
+              | "up"
+              | "down",
+            period: "this month",
+          },
+          iconColor: "text-green-400",
+        },
+      ]
+    : [];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-400">Loading dashboard...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
+        {stats.map((stat: any, index: number) => (
           <StatCard key={index} {...stat} />
         ))}
       </div>
@@ -117,13 +201,13 @@ const DashboardPage: React.FC = () => {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DonutChart data={leadsData} title="Leads by Source" />
-        <TopDoctorsCard doctors={topDoctors} />
+        <DonutChart data={leadsChartData} title="Leads by Source" />
+        <TopDoctorsCard doctors={topDoctorsData} />
       </div>
 
       {/* Revenue Analytics */}
       <AreaChartComponent
-        data={revenueData}
+        data={revenueChartData}
         title="Revenue Analytics"
         color="#2CA5A9"
       />

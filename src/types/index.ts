@@ -1,11 +1,13 @@
 // User Types
 export type UserRole =
-  | "admin"
-  | "manager"
-  | "centre_manager"
-  | "clinician"
-  | "care_coordinator"
-  | "front_desk";
+  | "ADMIN"
+  | "MANAGER"
+  | "CENTRE_MANAGER"
+  | "CLINICIAN"
+  | "CARE_COORDINATOR"
+  | "FRONT_DESK";
+
+export type UserType = "PATIENT" | "STAFF";
 
 export interface User {
   id: string;
@@ -20,6 +22,7 @@ export interface User {
   updatedAt: Date;
   lastLogin?: Date;
   isActive: boolean;
+  userType?: UserType;
 }
 
 // Centre Types
@@ -39,27 +42,44 @@ export interface Centre {
 
 // Appointment Types
 export type AppointmentStatus =
-  | "scheduled"
-  | "confirmed"
-  | "in-progress"
-  | "completed"
-  | "cancelled"
-  | "no-show";
+  | "BOOKED"
+  | "CONFIRMED"
+  | "RESCHEDULED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW";
+
+export type AppointmentType =
+  | "IN_PERSON"
+  | "ONLINE"
+  | "INPATIENT_ASSESSMENT"
+  | "FOLLOW_UP";
+
+export type AppointmentSource =
+  | "WEB_PATIENT"
+  | "ADMIN_FRONT_DESK"
+  | "ADMIN_CARE_COORDINATOR"
+  | "ADMIN_MANAGER";
 
 export interface Appointment {
   id: string;
   patientId: string;
+  patientName: string;
+  patientPhone: string;
   clinicianId: string;
+  clinicianName: string;
   centreId: string;
-  slotId: string;
-  date: Date;
-  startTime: string;
-  endTime: string;
+  centreName: string;
+  centreAddress: string;
+  appointmentType: AppointmentType;
+  scheduledStartAt: Date;
+  scheduledEndAt: Date;
+  durationMinutes: number;
   status: AppointmentStatus;
-  type: "first-visit" | "follow-up";
   notes?: string;
-  cancellationReason?: string;
-  createdBy: string;
+  bookedByUserId: string;
+  bookedByUserName: string;
+  source: AppointmentSource;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,52 +87,68 @@ export interface Appointment {
 // Patient Types
 export interface Patient {
   id: string;
-  name: string;
+  userId: string;
+  fullName: string;
   phone: string;
   email?: string;
   dateOfBirth?: Date;
   gender?: "male" | "female" | "other";
-  address?: string;
-  emergencyContact?: {
-    name: string;
-    phone: string;
-    relationship: string;
-  };
-  medicalHistory?: string;
+  bloodGroup?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  notes?: string;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 // Clinician Types
+export type ConsultationMode = "IN_PERSON" | "ONLINE";
+
 export interface Clinician {
   id: string;
   userId: string;
+  name: string;
   specialization: string;
-  qualification: string;
-  experience: number;
-  centreId: string;
+  registrationNumber: string;
+  yearsOfExperience: number;
+  primaryCentreId: string;
+  primaryCentreName: string;
   consultationFee: number;
-  isAvailable: boolean;
-  workingHours: WorkingHours[];
+  bio?: string;
+  consultationModes: ConsultationMode[];
+  defaultDurationMinutes: number;
+  profilePictureUrl?: string;
+  isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export interface WorkingHours {
-  dayOfWeek: number;
-  startTime: string;
-  endTime: string;
+export interface AvailabilityRule {
+  id?: string;
+  clinicianId: string;
+  centreId: string;
+  dayOfWeek: number; // 0-6 (Sunday-Saturday)
+  startTime: string; // HH:mm format
+  endTime: string; // HH:mm format
+  slotDurationMinutes: number;
+  mode: ConsultationMode;
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // TimeSlot Types
 export interface TimeSlot {
-  id: string;
+  id?: string;
   clinicianId: string;
   centreId: string;
-  date: Date;
-  startTime: string;
-  endTime: string;
-  duration: number;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
   status: "available" | "booked" | "blocked";
   appointmentId?: string;
+  mode: ConsultationMode;
 }
 
 // Analytics Types
