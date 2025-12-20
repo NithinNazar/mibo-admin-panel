@@ -18,6 +18,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   centreIds: string[];
+  assignedCentreId?: string; // Primary centre for FRONT_DESK and CENTRE_MANAGER
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;

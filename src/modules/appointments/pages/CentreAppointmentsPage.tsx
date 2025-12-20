@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { useAuth } from "../../../contexts/AuthContext";
 import Card from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
 import Table from "../../../components/ui/Table";
 import Select from "../../../components/ui/Select";
+import Modal from "../../../components/ui/Modal";
+import Input from "../../../components/ui/Input";
 import Badge from "../../../components/ui/Badge";
-import { Calendar, User, Clock, Video, MapPin, X } from "lucide-react";
+import { Calendar, User, Clock, Video, MapPin, X, Edit } from "lucide-react";
 import toast from "react-hot-toast";
 import appointmentService from "../../../services/appointmentService";
 import centreService from "../../../services/centreService";
@@ -19,6 +22,7 @@ import type {
 
 const CentreAppointmentsPage: React.FC = () => {
   const { centreId } = useParams<{ centreId: string }>();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<
     Appointment[]
@@ -26,6 +30,10 @@ const CentreAppointmentsPage: React.FC = () => {
   const [centres, setCentres] = useState<Centre[]>([]);
   const [clinicians, setClinicians] = useState<Clinician[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reschedulingAppointment, setReschedulingAppointment] =
+    useState<Appointment | null>(null);
+  const [newDateTime, setNewDateTime] = useState("");
+  const [newTime, setNewTime] = useState("");
 
   // Filters
   const [selectedCentre, setSelectedCentre] = useState(centreId || "");
@@ -38,6 +46,13 @@ const CentreAppointmentsPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    // If front desk, auto-select their assigned centre
+    if (user?.role === "FRONT_DESK" && user.assignedCentreId) {
+      setSelectedCentre(user.assignedCentreId);
+    }
+  }, [user]);
 
   useEffect(() => {
     applyFilters();
@@ -107,6 +122,39 @@ const CentreAppointmentsPage: React.FC = () => {
       fetchData();
     } catch (error: any) {
       toast.error("Failed to cancel appointment");
+    }
+  };
+
+  const handleOpenReschedule = (appointment: Appointment) => {
+    setReschedulingAppointment(appointment);
+    const date = new Date(appointment.scheduledStartAt);
+    setNewDateTime(date.toISOString().split("T")[0]);
+    setNewTime(
+      date.toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+  };
+
+  const handleReschedule = async () => {
+    if (!reschedulingAppointment || !newDateTime || !newTime) {
+      toast.error("Please select date and time");
+      return;
+    }
+
+    try {
+      const newStartTime = `${newDateTime}T${newTime}:00`;
+      await appointmentService.rescheduleAppointment(
+        reschedulingAppointment.id,
+        newStartTime
+      );
+      toast.success("Appointment rescheduled successfully");
+      setReschedulingAppointment(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error("Failed to reschedule appointment");
     }
   };
 
@@ -196,14 +244,24 @@ const CentreAppointmentsPage: React.FC = () => {
       render: (apt: Appointment) => (
         <div className="flex gap-2">
           {(apt.status === "BOOKED" || apt.status === "CONFIRMED") && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => handleCancelAppointment(apt.id)}
-            >
-              <X size={16} />
-              Cancel
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleOpenReschedule(apt)}
+              >
+                <Edit size={16} />
+                Reschedule
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleCancelAppointment(apt.id)}
+              >
+                <X size={16} />
+                Cancel
+              </Button>
+            </>
           )}
         </div>
       ),
@@ -287,6 +345,60 @@ const CentreAppointmentsPage: React.FC = () => {
           />
         )}
       </Card>
+
+      {/* Reschedule Modal */}
+      <Modal
+        isOpen={!!reschedulingAppointment}
+        onClose={() => setReschedulingAppointment(null)}
+        title="Reschedule Appointment"
+      >
+        {reschedulingAppointment && (
+          <div className="space-y-4">
+            <div className="p-3 bg-slate-700/50 rounded-lg space-y-2">
+              <div>
+                <div className="text-sm text-slate-400">Patient</div>
+                <div className="font-medium text-white">
+                  {reschedulingAppointment.patientName}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-400">Clinician</div>
+                <div className="font-medium text-white">
+                  {reschedulingAppointment.clinicianName}
+                </div>
+              </div>
+            </div>
+
+            <Input
+              label="New Date"
+              type="date"
+              value={newDateTime}
+              onChange={(e) => setNewDateTime(e.target.value)}
+              required
+            />
+
+            <Input
+              label="New Time"
+              type="time"
+              value={newTime}
+              onChange={(e) => setNewTime(e.target.value)}
+              required
+            />
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => setReschedulingAppointment(null)}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleReschedule}>
+                Confirm Reschedule
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

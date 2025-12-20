@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout/AdminLayout";
-// import { useAuth } from '../contexts/AuthContext'; // Uncomment when ready to enable auth
+import { useAuth } from "../contexts/AuthContext";
 
 // Auth
 import LoginPage from "../modules/auth/pages/LoginPage";
@@ -32,18 +32,7 @@ import SettingsPage from "../modules/settings/pages/SettingsPage";
 import SupportPage from "../modules/settings/pages/SupportPage";
 
 function AppRouter() {
-  // ============================================
-  // AUTHENTICATION IS DISABLED FOR NOW
-  // ============================================
-  // The dashboard will load directly without login
-  // When ready to enable authentication:
-  // 1. Uncomment the useAuth import above
-  // 2. Uncomment the line below
-  // 3. Set isAuthenticated = false or use: const { isAuthenticated, isLoading } = useAuth();
-
-  // const { isAuthenticated, isLoading } = useAuth();
-  const isAuthenticated = true; // Set to false to enable login page
-  const isLoading = false;
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (

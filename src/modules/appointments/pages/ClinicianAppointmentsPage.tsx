@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from "react";
 import Card from "../../../components/ui/Card";
+import Button from "../../../components/ui/Button";
+import Modal from "../../../components/ui/Modal";
+import Input from "../../../components/ui/Input";
 import Badge from "../../../components/ui/Badge";
-import { Calendar, Clock, User, Phone, MapPin, Video } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  User,
+  Phone,
+  MapPin,
+  Video,
+  X,
+  Edit,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import appointmentService from "../../../services/appointmentService";
 import type { Appointment } from "../../../types";
@@ -20,6 +32,10 @@ const ClinicianAppointmentsPage: React.FC = () => {
     pastCount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [reschedulingAppointment, setReschedulingAppointment] =
+    useState<Appointment | null>(null);
+  const [newDateTime, setNewDateTime] = useState("");
+  const [newTime, setNewTime] = useState("");
 
   useEffect(() => {
     fetchMyAppointments();
@@ -40,76 +56,147 @@ const ClinicianAppointmentsPage: React.FC = () => {
     }
   };
 
+  const handleCancelAppointment = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this appointment?")) return;
+
+    try {
+      await appointmentService.cancelAppointment(id, "Cancelled by clinician");
+      toast.success("Appointment cancelled successfully");
+      fetchMyAppointments();
+    } catch (error: any) {
+      toast.error("Failed to cancel appointment");
+    }
+  };
+
+  const handleOpenReschedule = (appointment: Appointment) => {
+    setReschedulingAppointment(appointment);
+    const date = new Date(appointment.scheduledStartAt);
+    setNewDateTime(date.toISOString().split("T")[0]);
+    setNewTime(
+      date.toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+  };
+
+  const handleReschedule = async () => {
+    if (!reschedulingAppointment || !newDateTime || !newTime) {
+      toast.error("Please select date and time");
+      return;
+    }
+
+    try {
+      const newStartTime = `${newDateTime}T${newTime}:00`;
+      await appointmentService.rescheduleAppointment(
+        reschedulingAppointment.id,
+        newStartTime
+      );
+      toast.success("Appointment rescheduled successfully");
+      setReschedulingAppointment(null);
+      fetchMyAppointments();
+    } catch (error: any) {
+      toast.error("Failed to reschedule appointment");
+    }
+  };
+
   const AppointmentCard: React.FC<{ appointment: Appointment }> = ({
     appointment,
-  }) => (
-    <div className="p-4 bg-slate-700/50 rounded-lg border border-slate-600 hover:border-miboTeal transition-colors">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-miboTeal/20 flex items-center justify-center">
-            <User size={20} className="text-miboTeal" />
-          </div>
-          <div>
-            <div className="font-medium text-white">
-              {appointment.patientName}
-            </div>
-            <div className="text-sm text-slate-400 flex items-center gap-1">
-              <Phone size={12} />
-              {appointment.patientPhone}
-            </div>
-          </div>
-        </div>
-        <Badge
-          variant={appointment.status === "CONFIRMED" ? "success" : "info"}
-        >
-          {appointment.status}
-        </Badge>
-      </div>
+  }) => {
+    const canModify =
+      appointment.status === "BOOKED" || appointment.status === "CONFIRMED";
 
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2 text-slate-300">
-          <Calendar size={14} className="text-slate-400" />
-          <span>
-            {new Date(appointment.scheduledStartAt).toLocaleDateString()}
-          </span>
+    return (
+      <div className="p-4 bg-slate-700/50 rounded-lg border border-slate-600 hover:border-miboTeal transition-colors">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-miboTeal/20 flex items-center justify-center">
+              <User size={20} className="text-miboTeal" />
+            </div>
+            <div>
+              <div className="font-medium text-white">
+                {appointment.patientName}
+              </div>
+              <div className="text-sm text-slate-400 flex items-center gap-1">
+                <Phone size={12} />
+                {appointment.patientPhone}
+              </div>
+            </div>
+          </div>
+          <Badge
+            variant={appointment.status === "CONFIRMED" ? "success" : "info"}
+          >
+            {appointment.status}
+          </Badge>
         </div>
-        <div className="flex items-center gap-2 text-slate-300">
-          <Clock size={14} className="text-slate-400" />
-          <span>
-            {new Date(appointment.scheduledStartAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            {" - "}
-            {new Date(appointment.scheduledEndAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-slate-300">
-          {appointment.appointmentType === "ONLINE" ? (
-            <>
-              <Video size={14} className="text-slate-400" />
-              <span>Online Consultation</span>
-            </>
-          ) : (
-            <>
-              <MapPin size={14} className="text-slate-400" />
-              <span>{appointment.centreName}</span>
-            </>
-          )}
-        </div>
-      </div>
 
-      {appointment.notes && (
-        <div className="mt-3 pt-3 border-t border-slate-600">
-          <div className="text-xs text-slate-400 mb-1">Notes:</div>
-          <div className="text-sm text-slate-300">{appointment.notes}</div>
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-slate-300">
+            <Calendar size={14} className="text-slate-400" />
+            <span>
+              {new Date(appointment.scheduledStartAt).toLocaleDateString()}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-300">
+            <Clock size={14} className="text-slate-400" />
+            <span>
+              {new Date(appointment.scheduledStartAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              {" - "}
+              {new Date(appointment.scheduledEndAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-300">
+            {appointment.appointmentType === "ONLINE" ? (
+              <>
+                <Video size={14} className="text-slate-400" />
+                <span>Online Consultation</span>
+              </>
+            ) : (
+              <>
+                <MapPin size={14} className="text-slate-400" />
+                <span>{appointment.centreName}</span>
+              </>
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
+
+        {appointment.notes && (
+          <div className="mt-3 pt-3 border-t border-slate-600">
+            <div className="text-xs text-slate-400 mb-1">Notes:</div>
+            <div className="text-sm text-slate-300">{appointment.notes}</div>
+          </div>
+        )}
+
+        {canModify && (
+          <div className="mt-4 flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleOpenReschedule(appointment)}
+            >
+              <Edit size={16} />
+              Reschedule
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => handleCancelAppointment(appointment.id)}
+            >
+              <X size={16} />
+              Cancel
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -228,6 +315,52 @@ const ClinicianAppointmentsPage: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Reschedule Modal */}
+      <Modal
+        isOpen={!!reschedulingAppointment}
+        onClose={() => setReschedulingAppointment(null)}
+        title="Reschedule Appointment"
+      >
+        {reschedulingAppointment && (
+          <div className="space-y-4">
+            <div className="p-3 bg-slate-700/50 rounded-lg">
+              <div className="text-sm text-slate-400">Patient</div>
+              <div className="font-medium text-white">
+                {reschedulingAppointment.patientName}
+              </div>
+            </div>
+
+            <Input
+              label="New Date"
+              type="date"
+              value={newDateTime}
+              onChange={(e) => setNewDateTime(e.target.value)}
+              required
+            />
+
+            <Input
+              label="New Time"
+              type="time"
+              value={newTime}
+              onChange={(e) => setNewTime(e.target.value)}
+              required
+            />
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => setReschedulingAppointment(null)}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleReschedule}>
+                Confirm Reschedule
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
