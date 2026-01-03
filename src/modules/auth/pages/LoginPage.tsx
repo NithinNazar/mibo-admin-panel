@@ -30,7 +30,10 @@ const LoginPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await sendOTP(phone);
+      // Remove country code if present (91 for India)
+      const cleanPhone = phone.replace(/^(\+91|91)/, "").trim();
+
+      await sendOTP(cleanPhone);
       setOtpSent(true);
       toast.success("OTP sent successfully!");
     } catch (error: any) {
@@ -45,31 +48,58 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
+      // Clean phone number (remove country code if present)
+      const cleanPhone = phone.replace(/^(\+91|91)/, "").trim();
+
+      console.log("=== Login Attempt ===");
+      console.log("Auth Method:", authMethod);
+
       if (authMethod === "phone-otp") {
         if (!phone || !otp) {
           toast.error("Please enter phone number and OTP");
+          setLoading(false);
           return;
         }
-        await login({ method: "phone-otp", phone, otp });
+        console.log("Logging in with phone OTP:", cleanPhone);
+        await login({ method: "phone-otp", phone: cleanPhone, otp });
       } else if (authMethod === "phone-password") {
         if (!phone || !password) {
           toast.error("Please enter phone number and password");
+          setLoading(false);
           return;
         }
-        await login({ method: "phone-password", phone, password });
+        console.log("Logging in with phone password:", cleanPhone);
+        await login({ method: "phone-password", phone: cleanPhone, password });
       } else {
         if (!username || !password) {
           toast.error("Please enter username and password");
+          setLoading(false);
           return;
         }
+        console.log("Logging in with username:", username);
         await login({ method: "username-password", username, password });
       }
 
+      console.log("Login successful, showing toast");
       toast.success("Login successful!");
-      navigate("/dashboard");
+
+      console.log("Attempting navigation to dashboard...");
+      console.log("Current path:", window.location.pathname);
+
+      // Force immediate navigation with page reload
+      console.log("Redirecting to /dashboard");
+      window.location.href = "/dashboard";
+
+      console.log("After redirect call");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Login failed");
-    } finally {
+      console.error("=== Login Error ===");
+      console.error("Error:", error);
+      console.error("Error message:", error.message);
+      console.error("Error response:", error.response?.data);
+
+      toast.error(
+        error.response?.data?.message || error.message || "Login failed"
+      );
       setLoading(false);
     }
   };

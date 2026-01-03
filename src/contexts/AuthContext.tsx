@@ -29,13 +29,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const checkAuth = async () => {
       try {
         if (authService.isAuthenticated()) {
-          // Try to get current user from API
-          // const currentUser = await authService.getCurrentUser();
-          // setUser(currentUser);
-
-          // For now, use stored user
+          // Use stored user
           const storedUser = authService.getStoredUser();
-          setUser(storedUser);
+          if (storedUser) {
+            setUser(storedUser);
+          }
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -82,7 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           break;
       }
 
+      // Update user state immediately after successful login
       setUser(response.user);
+
+      // Log for debugging
+      console.log("Login successful, user set:", response.user);
     } catch (error) {
       console.error("Login failed:", error);
       throw error;

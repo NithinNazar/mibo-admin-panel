@@ -1,646 +1,614 @@
-# Mibo Care Admin Panel - Deployment Guide
+# Mibo Mental Health - Deployment Guide
 
-## 🎯 Overview
+## Overview
 
-Your Mibo Care system has **3 main components**:
+This guide covers deploying the Mibo Mental Health platform for client testing:
 
-1. **Admin Panel UI** (this project) - React frontend
-2. **Backend API** - Express + TypeScript
-3. **PostgreSQL Database** - Cloud database
+- **Frontend** (Patient Portal) - React/Vite application
+- **Backend** (API Server) - Node.js/Express/TypeScript
+- **Database** - PostgreSQL
 
-## 📦 What You Need to Deploy
-
-### 1. Database (PostgreSQL)
-
-- Cloud PostgreSQL instance
-- Initial schema and tables
-- **Seed data with first admin user**
-
-### 2. Backend API (Express)
-
-- Node.js server
-- Connects to database
-- Provides REST API endpoints
-
-### 3. Admin Panel UI (React)
-
-- Static files (HTML, CSS, JS)
-- Hosted on CDN/Static hosting
-- Connects to Backend API
+**Admin Panel**: Can be deployed later (not required for patient flow)
 
 ---
 
-## 🚀 Deployment Steps
+## Quick Deployment Options
 
-### Step 1: Set Up Cloud Database
+### Option 1: Vercel + Render + Supabase (Recommended - Free Tier Available)
 
-#### Option A: AWS RDS PostgreSQL
+- **Frontend**: Vercel (Free)
+- **Backend**: Render (Free tier)
+- **Database**: Supabase (Free tier with 500MB)
 
-```bash
-# Create RDS instance
-- Engine: PostgreSQL 15+
-- Instance: db.t3.micro (free tier) or larger
-- Storage: 20GB minimum
-- Public access: Yes (for initial setup)
-- Security group: Allow port 5432 from your IP
-```
+### Option 2: Netlify + Railway + Railway DB
 
-#### Option B: Supabase (Recommended for Quick Start)
+- **Frontend**: Netlify (Free)
+- **Backend**: Railway (Free $5 credit)
+- **Database**: Railway PostgreSQL (Free $5 credit)
 
-```bash
-1. Go to supabase.com
-2. Create new project
-3. Get connection string
-4. Use built-in SQL editor
-```
+### Option 3: AWS (Production-Ready)
 
-#### Option C: Railway/Render
-
-```bash
-# Both offer free PostgreSQL hosting
-1. Create account
-2. Create PostgreSQL database
-3. Get connection string
-```
-
-**Connection String Format:**
-
-```
-postgresql://username:password@host:5432/database_name
-```
+- **Frontend**: AWS Amplify or S3 + CloudFront
+- **Backend**: AWS Elastic Beanstalk or EC2
+- **Database**: AWS RDS PostgreSQL
 
 ---
 
-### Step 2: Initialize Database Schema
+## Pre-Deployment Checklist
 
-#### A. Create Tables (Run these SQL scripts)
+### 1. Environment Variables
 
-**1. Create Roles Table First:**
+Ensure you have:
 
-```sql
-CREATE TABLE roles (
-  id BIGSERIAL PRIMARY KEY,
-  name VARCHAR(50) UNIQUE NOT NULL,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+- ✅ Gallabox API credentials (WhatsApp OTP)
+- ✅ Razorpay API keys (Payment)
+- ✅ Google Service Account (Optional - for Meet links)
+- ✅ Database connection string
+- ✅ JWT secrets
 
--- Insert default roles
-INSERT INTO roles (name, description) VALUES
-('ADMIN', 'Full system access'),
-('MANAGER', 'Multi-centre manager'),
-('CENTRE_MANAGER', 'Single centre manager'),
-('CLINICIAN', 'Doctor/Therapist'),
-('CARE_COORDINATOR', 'Patient flow coordinator'),
-('FRONT_DESK', 'Reception staff');
-```
+### 2. Code Preparation
 
-**2. Create Users Table:**
-
-```sql
-CREATE TABLE users (
-  id BIGSERIAL PRIMARY KEY,
-  phone VARCHAR(20),
-  email VARCHAR(255),
-  username VARCHAR(50) UNIQUE,
-  password_hash TEXT,
-  full_name VARCHAR(150) NOT NULL,
-  user_type VARCHAR(20) CHECK (user_type IN ('PATIENT', 'STAFF')),
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_users_phone ON users(phone);
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_type ON users(user_type);
-```
-
-**3. Create User Roles Junction Table:**
-
-```sql
-CREATE TABLE user_roles (
-  id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-  role_id BIGINT REFERENCES roles(id) ON DELETE CASCADE,
-  centre_id BIGINT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, role_id)
-);
-```
-
-**4. Create Centres Table:**
-
-```sql
-CREATE TABLE centres (
-  id BIGSERIAL PRIMARY KEY,
-  name VARCHAR(150) NOT NULL,
-  city VARCHAR(100) CHECK (city IN ('bangalore', 'kochi', 'mumbai')),
-  address_line1 VARCHAR(255),
-  address_line2 VARCHAR(255),
-  pincode VARCHAR(20),
-  contact_phone VARCHAR(20),
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-**5. Create Other Tables:**
-
-```sql
--- Patient profiles
-CREATE TABLE patient_profiles (
-  id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT UNIQUE REFERENCES users(id),
-  date_of_birth DATE,
-  gender VARCHAR(20),
-  blood_group VARCHAR(10),
-  emergency_contact_name VARCHAR(150),
-  emergency_contact_phone VARCHAR(20),
-  notes TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Clinician profiles
-CREATE TABLE clinician_profiles (
-  id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT UNIQUE REFERENCES users(id),
-  primary_centre_id BIGINT REFERENCES centres(id),
-  specialization VARCHAR(150),
-  registration_number VARCHAR(100),
-  years_of_experience INTEGER,
-  consultation_fee NUMERIC(10,2) DEFAULT 0,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Appointments
-CREATE TABLE appointments (
-  id BIGSERIAL PRIMARY KEY,
-  patient_id BIGINT REFERENCES patient_profiles(id),
-  clinician_id BIGINT REFERENCES clinician_profiles(id),
-  centre_id BIGINT REFERENCES centres(id),
-  appointment_type VARCHAR(30) CHECK (appointment_type IN ('IN_PERSON', 'ONLINE', 'INPATIENT_ASSESSMENT', 'FOLLOW_UP')),
-  scheduled_start_at TIMESTAMPTZ NOT NULL,
-  scheduled_end_at TIMESTAMPTZ NOT NULL,
-  status VARCHAR(20) CHECK (status IN ('BOOKED', 'CONFIRMED', 'RESCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW')),
-  notes TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+- ✅ Remove hardcoded localhost URLs
+- ✅ Update CORS origins
+- ✅ Set production environment variables
+- ✅ Build and test locally
 
 ---
 
-### Step 3: Create Initial Admin User
+## Deployment Steps
 
-**IMPORTANT: You MUST create at least one admin user to access the system!**
+## 🎨 FRONTEND DEPLOYMENT (Vercel)
 
-#### Method 1: Using bcrypt hash (Recommended)
+### Step 1: Prepare Frontend for Production
 
-**Generate password hash:**
+1. **Update API Base URL**
 
-```javascript
-// Run this in Node.js
-const bcrypt = require("bcrypt");
-const password = "YourSecurePassword123!";
-bcrypt.hash(password, 10, (err, hash) => {
-  console.log(hash);
+Create `mibo_version-2/.env.production`:
+
+```env
+VITE_API_URL=https://your-backend-url.onrender.com
+```
+
+2. **Update API Client**
+
+File: `mibo_version-2/src/services/api.ts`
+
+```typescript
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const apiClient = axios.create({
+  baseURL: `${API_BASE_URL}/api`,
+  // ... rest of config
 });
 ```
 
-**Insert admin user:**
+3. **Build Frontend Locally (Test)**
 
-```sql
--- 1. Create admin user
-INSERT INTO users (
-  phone,
-  email,
-  username,
-  password_hash,
-  full_name,
-  user_type,
-  is_active
-) VALUES (
-  '9876543210',                    -- Admin phone
-  'admin@mibocare.com',            -- Admin email
-  'admin',                         -- Admin username
-  '$2b$10$...',                    -- Replace with bcrypt hash from above
-  'System Administrator',          -- Admin name
-  'STAFF',                         -- Must be STAFF
-  true
-) RETURNING id;
-
--- 2. Assign ADMIN role (use the id from above)
-INSERT INTO user_roles (user_id, role_id, is_active)
-VALUES (
-  1,  -- Replace with user id from above
-  (SELECT id FROM roles WHERE name = 'ADMIN'),
-  true
-);
+```bash
+cd mibo_version-2
+npm run build
 ```
 
-#### Method 2: Quick Test Admin (Less Secure)
+### Step 2: Deploy to Vercel
 
-```sql
--- Create test admin with simple password
--- Password: admin123
-INSERT INTO users (phone, email, username, password_hash, full_name, user_type, is_active)
-VALUES (
-  '1234567890',
-  'admin@test.com',
-  'admin',
-  '$2b$10$rBV2kHf7Gg3rO7oDdDdDdOqKqKqKqKqKqKqKqKqKqKqKqKqKqKq',  -- admin123
-  'Test Admin',
-  'STAFF',
-  true
-) RETURNING id;
+**Option A: Using Vercel CLI**
 
--- Assign admin role
-INSERT INTO user_roles (user_id, role_id, is_active)
-VALUES (
-  (SELECT id FROM users WHERE username = 'admin'),
-  (SELECT id FROM roles WHERE name = 'ADMIN'),
-  true
-);
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy
+cd mibo_version-2
+vercel
+
+# Follow prompts:
+# - Set up and deploy? Yes
+# - Which scope? Your account
+# - Link to existing project? No
+# - Project name? mibo-patient-portal
+# - Directory? ./
+# - Override settings? No
+
+# Deploy to production
+vercel --prod
 ```
 
-**Your first admin credentials will be:**
+**Option B: Using Vercel Dashboard**
 
-```
-Username: admin
-Password: admin123 (or whatever you set)
+1. Go to https://vercel.com
+2. Sign up/Login with GitHub
+3. Click "Add New Project"
+4. Import your Git repository
+5. Configure:
+   - **Framework Preset**: Vite
+   - **Root Directory**: `mibo_version-2`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+6. Add Environment Variables:
+   - `VITE_API_URL`: (Your backend URL - add after backend deployment)
+7. Click "Deploy"
 
-OR
+### Step 3: Configure Custom Domain (Optional)
 
-Phone: 1234567890
-Password: admin123
-```
+1. In Vercel Dashboard → Settings → Domains
+2. Add your domain (e.g., `app.mibo.com`)
+3. Update DNS records as instructed
 
 ---
 
-### Step 4: Deploy Backend API
+## 🔧 BACKEND DEPLOYMENT (Render)
 
-#### Option A: Railway
+### Step 1: Prepare Backend for Production
 
-```bash
-1. Push backend code to GitHub
-2. Go to railway.app
-3. Create new project from GitHub repo
-4. Add PostgreSQL database (or connect existing)
-5. Set environment variables:
-   - DATABASE_URL=postgresql://...
-   - JWT_ACCESS_SECRET=your-secret-key
-   - JWT_REFRESH_SECRET=your-refresh-key
-   - PORT=5000
-6. Deploy
-7. Get API URL: https://your-app.railway.app
-```
+1. **Update Environment Variables**
 
-#### Option B: Render
-
-```bash
-1. Push backend to GitHub
-2. Go to render.com
-3. Create new Web Service
-4. Connect GitHub repo
-5. Set environment variables
-6. Deploy
-7. Get API URL: https://your-app.onrender.com
-```
-
-#### Option C: AWS EC2
-
-```bash
-1. Launch EC2 instance (Ubuntu)
-2. Install Node.js
-3. Clone backend repo
-4. Install dependencies: npm install
-5. Set environment variables
-6. Use PM2 to run: pm2 start server.js
-7. Configure nginx as reverse proxy
-8. Get API URL: http://your-ec2-ip:5000
-```
-
-**Backend Environment Variables:**
+Create `backend/.env.production`:
 
 ```env
-DATABASE_URL=postgresql://user:pass@host:5432/db
-JWT_ACCESS_SECRET=your-very-long-random-secret-key-here
-JWT_REFRESH_SECRET=another-very-long-random-secret-key
+NODE_ENV=production
+PORT=5000
+
+# Database (Will be provided by hosting service)
+DATABASE_URL=postgresql://user:password@host:5432/database
+
+# JWT Secrets (Generate new ones for production)
+JWT_ACCESS_SECRET=your-production-access-secret-min-32-chars
+JWT_REFRESH_SECRET=your-production-refresh-secret-min-32-chars
 JWT_ACCESS_EXPIRY=15m
 JWT_REFRESH_EXPIRY=7d
-PORT=5000
-NODE_ENV=production
-CORS_ORIGIN=https://admin.mibocare.com
+
+# OTP
+OTP_EXPIRY_MINUTES=10
+
+# CORS (Your frontend URL)
+CORS_ORIGIN=https://your-frontend-url.vercel.app
+
+# Gallabox (WhatsApp OTP)
+GALLABOX_API_KEY=your-gallabox-api-key
+GALLABOX_API_SECRET=your-gallabox-api-secret
+GALLABOX_PHONE_NUMBER_ID=your-phone-number-id
+
+# Razorpay (Payment)
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
+
+# Google Meet (Optional)
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
 ```
 
----
+2. **Update CORS Configuration**
 
-### Step 5: Deploy Admin Panel UI
-
-#### Build the Frontend
-
-```bash
-# In this project directory
-npm run build
-
-# This creates a 'dist' folder with static files
-```
-
-#### Option A: Vercel (Recommended - Easiest)
-
-```bash
-1. Push this project to GitHub
-2. Go to vercel.com
-3. Import GitHub repository
-4. Framework: Vite
-5. Build command: npm run build
-6. Output directory: dist
-7. Add environment variable:
-   VITE_API_BASE_URL=https://your-backend-api.com/api
-8. Deploy
-9. Get URL: https://your-app.vercel.app
-```
-
-#### Option B: Netlify
-
-```bash
-1. Push to GitHub
-2. Go to netlify.com
-3. New site from Git
-4. Build command: npm run build
-5. Publish directory: dist
-6. Environment variables:
-   VITE_API_BASE_URL=https://your-backend-api.com/api
-7. Deploy
-8. Get URL: https://your-app.netlify.app
-```
-
-#### Option C: AWS S3 + CloudFront
-
-```bash
-1. Build: npm run build
-2. Create S3 bucket
-3. Enable static website hosting
-4. Upload dist/ contents to S3
-5. Create CloudFront distribution
-6. Point to S3 bucket
-7. Get URL: https://d123456.cloudfront.net
-```
-
----
-
-## 🔧 Configuration
-
-### Frontend Environment Variables
-
-Create `.env.production`:
-
-```env
-VITE_API_BASE_URL=https://your-backend-api.com/api
-```
-
-### Update API URL in Code
-
-If not using environment variables, update `src/services/api.ts`:
+File: `backend/src/config/env.ts`
 
 ```typescript
-const API_BASE_URL = "https://your-backend-api.com/api";
+CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
 ```
 
----
+3. **Add Build Script**
 
-## ✅ Post-Deployment Checklist
+File: `backend/package.json`
 
-### 1. Test Database Connection
+```json
+{
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+  }
+}
+```
+
+4. **Test Build Locally**
 
 ```bash
-# Connect to your cloud database
-psql "postgresql://user:pass@host:5432/db"
-
-# Check tables exist
-\dt
-
-# Check admin user exists
-SELECT * FROM users WHERE user_type = 'STAFF';
+cd backend
+npm run build
+node dist/index.js
 ```
 
-### 2. Test Backend API
+### Step 2: Deploy to Render
+
+1. **Go to https://render.com**
+2. Sign up/Login with GitHub
+3. Click "New +" → "Web Service"
+4. Connect your Git repository
+5. Configure:
+
+   - **Name**: `mibo-backend`
+   - **Region**: Choose closest to your users
+   - **Branch**: `main`
+   - **Root Directory**: `backend`
+   - **Runtime**: `Node`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+   - **Instance Type**: Free (for testing) or Starter ($7/month)
+
+6. **Add Environment Variables** (Click "Advanced" → "Add Environment Variable"):
+
+   - Copy all variables from `.env.production`
+   - DATABASE_URL will be added after database setup
+
+7. Click "Create Web Service"
+
+### Step 3: Note Your Backend URL
+
+After deployment, Render will provide a URL like:
+`https://mibo-backend.onrender.com`
+
+---
+
+## 🗄️ DATABASE DEPLOYMENT (Supabase)
+
+### Option A: Supabase (Recommended for Free Tier)
+
+1. **Go to https://supabase.com**
+2. Sign up/Login
+3. Click "New Project"
+4. Configure:
+
+   - **Name**: `mibo-production`
+   - **Database Password**: (Generate strong password)
+   - **Region**: Choose closest to your backend
+   - **Pricing Plan**: Free (500MB, 2GB bandwidth)
+
+5. **Get Connection String**
+
+   - Go to Project Settings → Database
+   - Copy "Connection string" (URI format)
+   - Replace `[YOUR-PASSWORD]` with your database password
+
+6. **Run Database Migrations**
 
 ```bash
-# Test health endpoint
-curl https://your-backend-api.com/health
+# Install PostgreSQL client locally
+# Connect to Supabase database
+psql "postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres"
 
-# Test login
-curl -X POST https://your-backend-api.com/api/auth/login/username-password \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
+# Or use Supabase SQL Editor in dashboard
 ```
 
-### 3. Test Frontend
+7. **Execute Schema**
+
+Copy and paste the contents of these files in order:
+
+- `backend/POPULATE_DATABASE.sql` (Creates tables and sample data)
+- `backend/CREATE_ADMIN.sql` (Creates admin user)
+
+Or run from command line:
 
 ```bash
-1. Open https://your-admin-panel.com
-2. Should redirect to /login
-3. Login with admin credentials
-4. Should see dashboard
+psql "your-connection-string" < backend/POPULATE_DATABASE.sql
+psql "your-connection-string" < backend/CREATE_ADMIN.sql
 ```
+
+8. **Update Backend Environment Variable**
+   - Go to Render Dashboard → Your Service → Environment
+   - Update `DATABASE_URL` with Supabase connection string
+   - Click "Save Changes" (This will redeploy)
+
+### Option B: Render PostgreSQL
+
+1. In Render Dashboard, click "New +" → "PostgreSQL"
+2. Configure:
+
+   - **Name**: `mibo-database`
+   - **Database**: `mibo_production`
+   - **User**: `mibo_user`
+   - **Region**: Same as backend
+   - **Plan**: Free (1GB storage)
+
+3. Click "Create Database"
+4. Copy "Internal Database URL"
+5. Update backend environment variable `DATABASE_URL`
+6. Run migrations (same as Supabase steps above)
 
 ---
 
-## 🔐 Security Best Practices
+## 🔗 CONNECT FRONTEND TO BACKEND
 
-### 1. Change Default Admin Password
+### Step 1: Update Frontend Environment Variable
 
-```sql
--- After first login, update password
-UPDATE users
-SET password_hash = '$2b$10$NewHashHere'
-WHERE username = 'admin';
-```
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add/Update:
 
-### 2. Use Strong Secrets
+   - **Key**: `VITE_API_URL`
+   - **Value**: `https://mibo-backend.onrender.com` (your backend URL)
+   - **Environment**: Production
+
+3. Redeploy:
+   - Go to Deployments tab
+   - Click "..." on latest deployment → "Redeploy"
+
+### Step 2: Update Backend CORS
+
+1. Go to Render Dashboard → Your Service → Environment
+2. Update:
+   - **Key**: `CORS_ORIGIN`
+   - **Value**: `https://your-frontend-url.vercel.app`
+3. Save (auto-redeploys)
+
+---
+
+## 🧪 TESTING DEPLOYMENT
+
+### 1. Test Frontend
+
+Visit your Vercel URL: `https://your-app.vercel.app`
+
+- ✅ Homepage loads
+- ✅ Navigation works
+- ✅ Images load correctly
+
+### 2. Test Backend
+
+Visit your Render URL: `https://your-backend.onrender.com/api/health`
+
+- ✅ Should return: `{"status": "ok", "timestamp": "..."}`
+
+### 3. Test Database Connection
 
 ```bash
-# Generate strong JWT secrets
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+curl https://your-backend.onrender.com/api/health
+# Should show database: connected
 ```
 
-### 3. Enable HTTPS
+### 4. Test Complete Flow
 
-- Use SSL certificates (Let's Encrypt)
-- Force HTTPS redirects
-- Set secure cookie flags
-
-### 4. Database Security
-
-- Use strong passwords
-- Enable SSL connections
-- Restrict IP access
-- Regular backups
-
-### 5. Environment Variables
-
-- Never commit secrets to Git
-- Use platform secret management
-- Rotate secrets regularly
+1. ✅ Sign in with phone number
+2. ✅ Receive OTP via WhatsApp
+3. ✅ Verify OTP and login
+4. ✅ Browse experts
+5. ✅ Book appointment
+6. ✅ Make payment (test mode)
+7. ✅ View dashboard
 
 ---
 
-## 📊 Complete Deployment Architecture
+## 📱 PRODUCTION CHECKLIST
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    USERS                                 │
-│              (Admins, Doctors, Staff)                    │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ↓
-┌─────────────────────────────────────────────────────────┐
-│           ADMIN PANEL UI (React)                         │
-│         https://admin.mibocare.com                       │
-│                                                          │
-│  Hosted on: Vercel / Netlify / S3+CloudFront           │
-│  Built from: This project (npm run build)               │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     │ HTTPS API Calls
-                     ↓
-┌─────────────────────────────────────────────────────────┐
-│         BACKEND API (Express + TypeScript)               │
-│         https://api.mibocare.com                         │
-│                                                          │
-│  Hosted on: Railway / Render / AWS EC2                  │
-│  Endpoints: /api/auth, /api/users, /api/appointments    │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     │ PostgreSQL Connection
-                     ↓
-┌─────────────────────────────────────────────────────────┐
-│         POSTGRESQL DATABASE                              │
-│         postgresql://host:5432/mibo_db                   │
-│                                                          │
-│  Hosted on: AWS RDS / Supabase / Railway                │
-│  Contains: Users, Roles, Centres, Appointments, etc.    │
-│  Initial Admin: Created via SQL script                   │
-└─────────────────────────────────────────────────────────┘
-```
+### Security
+
+- [ ] Use HTTPS for all connections
+- [ ] Set strong JWT secrets (min 32 characters)
+- [ ] Enable rate limiting
+- [ ] Set secure CORS origins
+- [ ] Use environment variables (never commit secrets)
+- [ ] Enable database SSL connection
+
+### Performance
+
+- [ ] Enable CDN for frontend assets
+- [ ] Set up database connection pooling
+- [ ] Add Redis for session management (optional)
+- [ ] Enable gzip compression
+- [ ] Set up monitoring (Sentry, LogRocket)
+
+### Monitoring
+
+- [ ] Set up error tracking (Sentry)
+- [ ] Enable application logs
+- [ ] Set up uptime monitoring (UptimeRobot)
+- [ ] Configure alerts for errors
+
+### Backup
+
+- [ ] Enable automatic database backups
+- [ ] Export environment variables
+- [ ] Document deployment process
+- [ ] Keep local backup of database
 
 ---
 
-## 🎯 Quick Start Summary
+## 🚨 TROUBLESHOOTING
 
-**YES, you need an admin account from the start!**
+### Frontend Issues
 
-### Minimum Steps to Deploy:
+**Problem**: API calls failing
 
-1. **Create Cloud Database** (Supabase/Railway - 5 min)
-2. **Run SQL Scripts** to create tables (5 min)
-3. **Insert Admin User** via SQL (2 min)
-4. **Deploy Backend** to Railway/Render (10 min)
-5. **Deploy Frontend** to Vercel/Netlify (5 min)
-6. **Login** with admin credentials ✅
+- Check `VITE_API_URL` environment variable
+- Verify backend is running
+- Check browser console for CORS errors
 
-**Total Time: ~30 minutes**
+**Problem**: Build fails
+
+- Run `npm run build` locally first
+- Check for TypeScript errors
+- Verify all dependencies are in `package.json`
+
+### Backend Issues
+
+**Problem**: Database connection fails
+
+- Verify `DATABASE_URL` is correct
+- Check database is running
+- Ensure IP whitelist includes Render IPs (if using IP restrictions)
+
+**Problem**: OTP not sending
+
+- Verify Gallabox credentials
+- Check Gallabox API logs
+- Ensure phone number format is correct (91XXXXXXXXXX)
+
+**Problem**: Payment fails
+
+- Verify Razorpay keys (test vs live)
+- Check Razorpay dashboard for errors
+- Ensure webhook URL is configured
+
+### Database Issues
+
+**Problem**: Tables not created
+
+- Run SQL scripts manually
+- Check for syntax errors
+- Verify user has CREATE permissions
+
+**Problem**: Connection timeout
+
+- Check database is running
+- Verify connection string
+- Ensure SSL is enabled if required
 
 ---
 
-## 🆘 Troubleshooting
+## 💰 COST ESTIMATE
 
-### Can't Login
+### Free Tier (Testing)
 
-- Check backend is running
-- Check database connection
-- Verify admin user exists in database
-- Check password hash is correct
-- Check CORS settings allow frontend domain
+- **Frontend** (Vercel): Free
+- **Backend** (Render): Free (sleeps after 15 min inactivity)
+- **Database** (Supabase): Free (500MB)
+- **Total**: $0/month
 
-### White Screen
+**Limitations**:
 
-- Check browser console for errors
-- Verify API_BASE_URL is correct
-- Check backend API is accessible
-- Verify authentication is enabled
+- Backend sleeps after inactivity (30s cold start)
+- 500MB database storage
+- Limited bandwidth
 
-### Database Connection Failed
+### Starter Tier (Production)
 
-- Check connection string format
-- Verify database is running
-- Check firewall/security group rules
-- Test connection with psql
+- **Frontend** (Vercel): Free
+- **Backend** (Render Starter): $7/month
+- **Database** (Supabase Pro): $25/month OR Render PostgreSQL: $7/month
+- **Total**: $14-32/month
+
+**Benefits**:
+
+- No cold starts
+- 8GB database storage
+- Better performance
+- More bandwidth
+
+### Recommended for Launch
+
+- **Frontend** (Vercel Pro): $20/month
+- **Backend** (Render Standard): $25/month
+- **Database** (Supabase Pro): $25/month
+- **Total**: $70/month
 
 ---
 
-## 📝 Sample Seed Script
+## 📞 SUPPORT CONTACTS
 
-Create `seed-admin.sql`:
+### Hosting Platforms
 
-```sql
--- Seed script for initial admin user
--- Run this ONCE after creating tables
+- **Vercel**: https://vercel.com/support
+- **Render**: https://render.com/docs
+- **Supabase**: https://supabase.com/docs
 
--- Insert admin user
-INSERT INTO users (phone, email, username, password_hash, full_name, user_type, is_active)
-VALUES (
-  '9876543210',
-  'admin@mibocare.com',
-  'admin',
-  '$2b$10$rBV2kHf7Gg3rO7oDdDdDdOqKqKqKqKqKqKqKqKqKqKqKqKqKqKq',
-  'System Administrator',
-  'STAFF',
-  true
-);
+### Services
 
--- Assign ADMIN role
-INSERT INTO user_roles (user_id, role_id, is_active)
-SELECT
-  u.id,
-  r.id,
-  true
-FROM users u
-CROSS JOIN roles r
-WHERE u.username = 'admin'
-  AND r.name = 'ADMIN';
+- **Gallabox**: https://gallabox.com/support
+- **Razorpay**: https://razorpay.com/support
+- **Google Cloud**: https://cloud.google.com/support
 
--- Verify
-SELECT
-  u.username,
-  u.full_name,
-  r.name as role
-FROM users u
-JOIN user_roles ur ON u.id = ur.user_id
-JOIN roles r ON ur.role_id = r.id
-WHERE u.username = 'admin';
-```
+---
 
-Run it:
+## 🎯 QUICK START COMMANDS
+
+### Deploy Everything (After setup)
 
 ```bash
-psql "your-connection-string" -f seed-admin.sql
+# 1. Deploy Frontend
+cd mibo_version-2
+vercel --prod
+
+# 2. Deploy Backend (auto-deploys on git push)
+git add .
+git commit -m "Production deployment"
+git push origin main
+
+# 3. Database is already running on Supabase
+```
+
+### Update Environment Variables
+
+```bash
+# Frontend (Vercel)
+vercel env add VITE_API_URL production
+
+# Backend (Render)
+# Use Render Dashboard → Environment tab
 ```
 
 ---
 
-## ✨ You're Ready!
+## 📝 POST-DEPLOYMENT
 
-After following these steps, you'll have:
+### 1. Share with Clients
 
-- ✅ Cloud PostgreSQL database with tables
-- ✅ Initial admin user created
-- ✅ Backend API deployed and running
-- ✅ Admin Panel UI deployed and accessible
-- ✅ Ability to login and manage your hospital system
+- Frontend URL: `https://your-app.vercel.app`
+- Test credentials: Phone `9048810697`
+- Test payment: Use Razorpay test cards
 
-**First Login:**
+### 2. Monitor
 
+- Check Vercel Analytics
+- Monitor Render logs
+- Review Supabase metrics
+
+### 3. Collect Feedback
+
+- Set up feedback form
+- Monitor error logs
+- Track user behavior
+
+---
+
+## 🔄 UPDATES & MAINTENANCE
+
+### Deploy Updates
+
+**Frontend**:
+
+```bash
+git push origin main
+# Vercel auto-deploys
 ```
-URL: https://your-admin-panel.com/login
-Username: admin
-Password: admin123 (or whatever you set)
+
+**Backend**:
+
+```bash
+git push origin main
+# Render auto-deploys
 ```
 
-**Remember to change the default password after first login!**
+### Database Migrations
+
+```bash
+# Connect to production database
+psql "your-production-connection-string"
+
+# Run migration
+\i path/to/migration.sql
+```
+
+---
+
+## ✅ DEPLOYMENT COMPLETE!
+
+Your Mibo Mental Health platform is now live and ready for client testing!
+
+**URLs**:
+
+- Patient Portal: `https://your-app.vercel.app`
+- Backend API: `https://your-backend.onrender.com`
+- Database: Managed by Supabase/Render
+
+**Next Steps**:
+
+1. Test complete booking flow
+2. Share with clients
+3. Collect feedback
+4. Deploy admin panel (when ready)
+5. Scale as needed
+
+---
+
+**Need Help?** Check troubleshooting section or contact support.

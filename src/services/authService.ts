@@ -38,8 +38,10 @@ class AuthService {
     data: LoginWithPhoneOTPRequest
   ): Promise<AuthResponse> {
     const response = await api.post("/auth/login/phone-otp", data);
-    this.setAuthData(response.data);
-    return response.data;
+    // Backend returns { success: true, data: { user, accessToken, refreshToken } }
+    const authData = response.data.data || response.data;
+    this.setAuthData(authData);
+    return authData;
   }
 
   // Login with phone + password
@@ -47,8 +49,10 @@ class AuthService {
     data: LoginWithPhonePasswordRequest
   ): Promise<AuthResponse> {
     const response = await api.post("/auth/login/phone-password", data);
-    this.setAuthData(response.data);
-    return response.data;
+    // Backend returns { success: true, data: { user, accessToken, refreshToken } }
+    const authData = response.data.data || response.data;
+    this.setAuthData(authData);
+    return authData;
   }
 
   // Login with username + password
@@ -56,8 +60,10 @@ class AuthService {
     data: LoginWithUsernamePasswordRequest
   ): Promise<AuthResponse> {
     const response = await api.post("/auth/login/username-password", data);
-    this.setAuthData(response.data);
-    return response.data;
+    // Backend returns { success: true, data: { user, accessToken, refreshToken } }
+    const authData = response.data.data || response.data;
+    this.setAuthData(authData);
+    return authData;
   }
 
   // Refresh access token
@@ -86,9 +92,17 @@ class AuthService {
 
   // Helper: Set auth data in localStorage
   private setAuthData(data: AuthResponse): void {
+    console.log("=== Setting Auth Data ===");
+    console.log("Data received:", data);
+    console.log("Access Token:", data.accessToken?.substring(0, 20) + "...");
+    console.log("User:", data.user);
+
     localStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
     localStorage.setItem("user", JSON.stringify(data.user));
+
+    console.log("Auth data saved to localStorage");
+    console.log("isAuthenticated:", this.isAuthenticated());
   }
 
   // Helper: Clear auth data from localStorage
