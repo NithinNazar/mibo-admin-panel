@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Button from "../ui/Button";
 import type { TimeSlot } from "../../types";
-import { formatTimeSlot } from "../../utils/slotGenerator";
 
 interface WeekViewProps {
   clinicianId: string;
@@ -13,8 +12,6 @@ interface WeekViewProps {
 }
 
 const WeekView: React.FC<WeekViewProps> = ({
-  clinicianId,
-  centreId,
   startDate = new Date(),
   slots,
   onSlotClick,

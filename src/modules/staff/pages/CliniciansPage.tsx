@@ -5,7 +5,7 @@ import Table from "../../../components/ui/Table";
 import Modal from "../../../components/ui/Modal";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
-import { Plus, Edit, Trash2, Calendar, DollarSign, Award } from "lucide-react";
+import { Plus, Edit, Trash2, DollarSign, Award } from "lucide-react";
 import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
 import centreService from "../../../services/centreService";
@@ -155,7 +155,7 @@ const CliniciansPage: React.FC = () => {
   const columns = [
     {
       key: "name",
-      label: "Clinician",
+      header: "Clinician",
       render: (clinician: Clinician) => (
         <div>
           <div className="font-medium text-white">{clinician.name}</div>
@@ -167,7 +167,7 @@ const CliniciansPage: React.FC = () => {
     },
     {
       key: "experience",
-      label: "Experience",
+      header: "Experience",
       render: (clinician: Clinician) => (
         <div className="flex items-center gap-2">
           <Award size={16} className="text-slate-400" />
@@ -179,14 +179,14 @@ const CliniciansPage: React.FC = () => {
     },
     {
       key: "centre",
-      label: "Primary Centre",
+      header: "Primary Centre",
       render: (clinician: Clinician) => (
         <span className="text-slate-300">{clinician.primaryCentreName}</span>
       ),
     },
     {
       key: "fee",
-      label: "Consultation Fee",
+      header: "Consultation Fee",
       render: (clinician: Clinician) => (
         <div className="flex items-center gap-2">
           <DollarSign size={16} className="text-slate-400" />
@@ -196,7 +196,7 @@ const CliniciansPage: React.FC = () => {
     },
     {
       key: "modes",
-      label: "Modes",
+      header: "Modes",
       render: (clinician: Clinician) => (
         <div className="flex gap-1">
           {clinician.consultationModes.map((mode) => (
@@ -212,7 +212,7 @@ const CliniciansPage: React.FC = () => {
     },
     {
       key: "status",
-      label: "Status",
+      header: "Status",
       render: (clinician: Clinician) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -227,7 +227,7 @@ const CliniciansPage: React.FC = () => {
     },
     {
       key: "actions",
-      label: "Actions",
+      header: "Actions",
       render: (clinician: Clinician) => (
         <div className="flex gap-2">
           <Button
@@ -272,7 +272,11 @@ const CliniciansPage: React.FC = () => {
             No clinicians found. Add your first clinician to get started.
           </div>
         ) : (
-          <Table columns={columns} data={clinicians} />
+          <Table
+            columns={columns}
+            data={clinicians}
+            keyExtractor={(clinician) => clinician.id.toString()}
+          />
         )}
       </Card>
 

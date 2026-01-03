@@ -12,7 +12,6 @@ interface SlotGridProps {
 }
 
 const SlotGrid: React.FC<SlotGridProps> = ({
-  date,
   slots,
   onSlotClick,
   selectedSlotId,

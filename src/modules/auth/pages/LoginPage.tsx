@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import Card from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
@@ -10,7 +9,6 @@ import toast from "react-hot-toast";
 type AuthMethod = "phone-otp" | "phone-password" | "username-password";
 
 const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
   const { login, sendOTP } = useAuth();
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone-password");
   const [loading, setLoading] = useState(false);

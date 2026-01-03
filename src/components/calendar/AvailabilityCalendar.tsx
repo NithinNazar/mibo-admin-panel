@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import Button from "../ui/Button";
 import type { TimeSlot } from "../../types";
-import { formatTimeSlot, isSlotInPast } from "../../utils/slotGenerator";
 
 interface AvailabilityCalendarProps {
   clinicianId: string;
@@ -18,9 +17,6 @@ interface AvailabilityCalendarProps {
 }
 
 const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
-  clinicianId,
-  centreId,
-  onSlotSelect,
   slots,
   selectedDate,
   onDateChange,
@@ -73,19 +69,6 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       day
     ).padStart(2, "0")}`;
     return slots.filter((slot) => slot.date === dateStr);
-  };
-
-  const getSlotStatusColor = (status: string) => {
-    switch (status) {
-      case "available":
-        return "bg-green-500";
-      case "booked":
-        return "bg-red-500";
-      case "blocked":
-        return "bg-gray-500";
-      default:
-        return "bg-slate-500";
-    }
   };
 
   const monthNames = [
