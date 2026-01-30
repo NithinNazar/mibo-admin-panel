@@ -48,6 +48,14 @@ class CentreService {
   async deleteCentre(id: string): Promise<void> {
     await api.delete(`/centres/${id}`);
   }
+
+  // Toggle centre active status
+  async toggleActive(id: string, isActive: boolean): Promise<Centre> {
+    const response = await api.patch(`/centres/${id}/toggle-active`, {
+      isActive,
+    });
+    return response.data.data || response.data;
+  }
 }
 
 export default new CentreService();

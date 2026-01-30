@@ -6,10 +6,23 @@ import Select from "../../../components/ui/Select";
 import Modal from "../../../components/ui/Modal";
 import Table from "../../../components/ui/Table";
 import Badge from "../../../components/ui/Badge";
-import { Plus, Eye, EyeOff, Copy, Check } from "lucide-react";
+import {
+  Plus,
+  Copy,
+  Check,
+  Download,
+  FileText,
+  Printer,
+  User,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import centreService from "../../../services/centreService";
 import staffService from "../../../services/staffService";
+import {
+  exportToCSV,
+  exportToPDF,
+  printTable,
+} from "../../../utils/exportHelpers";
 import type { Centre } from "../../../types";
 
 interface FrontDeskStaff {
@@ -17,16 +30,12 @@ interface FrontDeskStaff {
   full_name: string;
   phone: string;
   email?: string;
-  username: string;
-  centreId: string;
-  centreName: string;
+  username?: string;
+  centreId?: string;
+  centreName?: string;
+  designation?: string;
   isActive: boolean;
   createdAt: Date;
-}
-
-interface NewStaffCredentials {
-  username: string;
-  password: string;
 }
 
 const FrontDeskPage: React.FC = () => {
@@ -34,10 +43,10 @@ const FrontDeskPage: React.FC = () => {
   const [centres, setCentres] = useState<Centre[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
-  const [newCredentials, setNewCredentials] =
-    useState<NewStaffCredentials | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<FrontDeskStaff | null>(
+    null,
+  );
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Form state
@@ -45,6 +54,8 @@ const FrontDeskPage: React.FC = () => {
     full_name: "",
     phone: "",
     email: "",
+    username: "",
+    password: "",
     centreId: "",
   });
 
@@ -65,10 +76,9 @@ const FrontDeskPage: React.FC = () => {
   const fetchFrontDeskStaff = async () => {
     try {
       setLoading(true);
-      // TODO: Implement API call to fetch front desk staff
-      // const data = await staffService.getFrontDeskStaff();
-      // setStaff(data);
-      setStaff([]); // Placeholder
+      // Role ID 6 = FRONT_DESK
+      const data = await staffService.getStaffByRole(6);
+      setStaff(data);
     } catch (error: any) {
       toast.error("Failed to fetch front desk staff");
     } finally {
@@ -76,61 +86,101 @@ const FrontDeskPage: React.FC = () => {
     }
   };
 
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    try {
+      await staffService.toggleActive(id, isActive);
+      toast.success(
+        `Front Desk Staff ${isActive ? "activated" : "deactivated"} successfully`,
+      );
+      fetchFrontDeskStaff();
+    } catch (error: any) {
+      toast.error("Failed to update staff status");
+    }
+  };
+
+  const handleExportCSV = () => {
+    const csvData = staff.map((s) => ({
+      Name: s.full_name,
+      Phone: s.phone,
+      Email: s.email || "N/A",
+      Username: s.username,
+      Centre: s.centreName,
+      Status: s.isActive ? "Active" : "Inactive",
+    }));
+    exportToCSV(csvData, "front-desk-staff");
+    toast.success("Exported to CSV successfully");
+  };
+
+  const handleExportPDF = () => {
+    const headers = ["Name", "Phone", "Email", "Username", "Centre", "Status"];
+    const rows = staff.map((s) => [
+      s.full_name,
+      s.phone,
+      s.email || "N/A",
+      s.username,
+      s.centreName,
+      s.isActive ? "Active" : "Inactive",
+    ]);
+    exportToPDF(headers, rows, "Front Desk Staff List");
+    toast.success("Exported to PDF successfully");
+  };
+
+  const handlePrint = () => {
+    const headers = ["Name", "Phone", "Email", "Username", "Centre", "Status"];
+    const rows = staff.map((s) => [
+      s.full_name,
+      s.phone,
+      s.email || "N/A",
+      s.username,
+      s.centreName,
+      s.isActive ? "Active" : "Inactive",
+    ]);
+    printTable(headers, rows, "Front Desk Staff List");
+  };
+
   const handleCreateStaff = async () => {
     try {
-      if (!formData.full_name || !formData.phone || !formData.centreId) {
+      if (
+        !formData.full_name ||
+        !formData.phone ||
+        !formData.username ||
+        !formData.password ||
+        !formData.centreId
+      ) {
         toast.error("Please fill in all required fields");
         return;
       }
 
       setLoading(true);
-
-      // TODO: Implement API call
-      // const response = await staffService.createFrontDeskStaff(formData);
-
-      // Mock response for now
-      const response = {
-        user: {
-          id: "10",
-          full_name: formData.full_name,
-          phone: formData.phone,
-          email: formData.email,
-          username: `frontdesk_${formData.full_name
-            .toLowerCase()
-            .replace(/\s+/g, "_")}`,
-          centreId: formData.centreId,
-          isActive: true,
-          createdAt: new Date(),
-        },
-        credentials: {
-          username: `frontdesk_${formData.full_name
-            .toLowerCase()
-            .replace(/\s+/g, "_")}`,
-          password: "Abc12345", // This would come from backend
-        },
-      };
-
-      // Show credentials modal
-      setNewCredentials(response.credentials);
+      await staffService.createFrontDeskStaff({
+        ...formData,
+        centreId: parseInt(formData.centreId),
+      });
+      toast.success("Front desk staff created successfully!");
       setShowCreateModal(false);
-      setShowCredentialsModal(true);
-
-      // Reset form
       setFormData({
         full_name: "",
         phone: "",
         email: "",
+        username: "",
+        password: "",
         centreId: "",
       });
-
-      // Refresh list
-      await fetchFrontDeskStaff();
-
-      toast.success("Front desk staff created successfully!");
+      fetchFrontDeskStaff();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to create staff");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewDetails = async (staffMember: FrontDeskStaff) => {
+    try {
+      const details = await staffService.getStaffById(staffMember.id);
+      setSelectedStaff(details);
+      setShowDetailsModal(true);
+    } catch (error: any) {
+      toast.error("Failed to fetch staff details");
     }
   };
 
@@ -149,6 +199,19 @@ const FrontDeskPage: React.FC = () => {
     {
       header: "Name",
       accessor: "full_name" as keyof FrontDeskStaff,
+      render: (value: string, row: FrontDeskStaff) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-miboTeal/20 flex items-center justify-center">
+            <User size={20} className="text-miboTeal" />
+          </div>
+          <div>
+            <div className="font-medium text-white">{value}</div>
+            <div className="text-sm text-slate-400">
+              {row.designation || "Front Desk"}
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
       header: "Phone",
@@ -162,18 +225,48 @@ const FrontDeskPage: React.FC = () => {
     {
       header: "Username",
       accessor: "username" as keyof FrontDeskStaff,
+      render: (value: string | undefined) => (
+        <span className="font-mono">{value || "N/A"}</span>
+      ),
     },
     {
       header: "Centre",
       accessor: "centreName" as keyof FrontDeskStaff,
+      render: (value: string | undefined) => value || "-",
     },
     {
       header: "Status",
       accessor: "isActive" as keyof FrontDeskStaff,
       render: (value: boolean) => (
-        <Badge variant={value ? "success" : "error"}>
+        <Badge variant={value ? "success" : "danger"}>
           {value ? "Active" : "Inactive"}
         </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      accessor: "id" as keyof FrontDeskStaff,
+      render: (value: string, row: FrontDeskStaff) => (
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleViewDetails(row)}
+          >
+            View Details
+          </Button>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={row.isActive}
+              onChange={() => handleToggleActive(value, !row.isActive)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-miboTeal focus:ring-miboTeal cursor-pointer"
+            />
+            <span className="text-xs text-slate-400">
+              {row.isActive ? "Active" : "Inactive"}
+            </span>
+          </label>
+        </div>
       ),
     },
   ];
@@ -196,6 +289,39 @@ const FrontDeskPage: React.FC = () => {
           Add Front Desk Staff
         </Button>
       </div>
+
+      {/* Export Buttons */}
+      {staff.length > 0 && (
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportCSV}
+            className="flex items-center gap-2"
+          >
+            <Download size={16} />
+            Export CSV
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportPDF}
+            className="flex items-center gap-2"
+          >
+            <FileText size={16} />
+            Export PDF
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-2"
+          >
+            <Printer size={16} />
+            Print
+          </Button>
+        </div>
+      )}
 
       <Card>
         {loading && staff.length === 0 ? (
@@ -240,7 +366,7 @@ const FrontDeskPage: React.FC = () => {
           <Input
             label="Phone Number"
             type="tel"
-            placeholder="+91 9876543210"
+            placeholder="10-digit phone number"
             value={formData.phone}
             onChange={(e) =>
               setFormData({ ...formData, phone: e.target.value })
@@ -274,10 +400,32 @@ const FrontDeskPage: React.FC = () => {
             required
           />
 
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mt-4">
+          <Input
+            label="Username"
+            type="text"
+            placeholder="Enter username"
+            value={formData.username}
+            onChange={(e) =>
+              setFormData({ ...formData, username: e.target.value })
+            }
+            required
+          />
+
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Minimum 8 characters"
+            value={formData.password}
+            onChange={(e) =>
+              setFormData({ ...formData, password: e.target.value })
+            }
+            required
+          />
+
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
             <p className="text-sm text-blue-400">
-              <strong>Note:</strong> Username and password will be automatically
-              generated and shown only once. Make sure to save them securely.
+              <strong>Note:</strong> Please save the username and password
+              securely. The staff member will use these credentials to log in.
             </p>
           </div>
 
@@ -301,42 +449,59 @@ const FrontDeskPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Credentials Modal */}
+      {/* View Details Modal */}
       <Modal
-        isOpen={showCredentialsModal}
+        isOpen={showDetailsModal}
         onClose={() => {
-          setShowCredentialsModal(false);
-          setNewCredentials(null);
-          setShowPassword(false);
+          setShowDetailsModal(false);
+          setSelectedStaff(null);
         }}
-        title="Staff Credentials Created"
+        title="Front Desk Staff Details"
       >
-        <div className="space-y-6">
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-            <p className="text-sm text-yellow-400 font-medium">
-              ⚠️ Important: Save these credentials now!
-            </p>
-            <p className="text-sm text-yellow-400 mt-1">
-              These credentials will not be shown again. Make sure to save them
-              securely and share with the staff member.
-            </p>
-          </div>
+        {selectedStaff && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Full Name
+              </label>
+              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                {selectedStaff.full_name}
+              </div>
+            </div>
 
-          {newCredentials && (
-            <div className="space-y-4">
-              {/* Username */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Phone Number
+              </label>
+              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                {selectedStaff.phone}
+              </div>
+            </div>
+
+            {selectedStaff.email && (
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Username
+                  Email
                 </label>
-                <div className="flex gap-2">
-                  <div className="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white font-mono">
-                    {newCredentials.username}
-                  </div>
+                <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                  {selectedStaff.email}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Username
+              </label>
+              <div className="flex gap-2">
+                <div className="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white font-mono">
+                  {selectedStaff.username || "N/A"}
+                </div>
+                {selectedStaff.username && (
                   <Button
                     variant="secondary"
                     onClick={() =>
-                      copyToClipboard(newCredentials.username, "Username")
+                      copyToClipboard(selectedStaff.username!, "Username")
                     }
                     className="px-4"
                   >
@@ -346,65 +511,42 @@ const FrontDeskPage: React.FC = () => {
                       <Copy size={20} />
                     )}
                   </Button>
-                </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Password
-                </label>
-                <div className="flex gap-2">
-                  <div className="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white font-mono flex items-center justify-between">
-                    <span>
-                      {showPassword ? newCredentials.password : "••••••••"}
-                    </span>
-                    <button
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-slate-400 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      copyToClipboard(newCredentials.password, "Password")
-                    }
-                    className="px-4"
-                  >
-                    {copiedField === "Password" ? (
-                      <Check size={20} className="text-green-400" />
-                    ) : (
-                      <Copy size={20} />
-                    )}
-                  </Button>
-                </div>
+                )}
               </div>
             </div>
-          )}
 
-          <div className="bg-slate-700/50 rounded-lg p-4">
-            <p className="text-sm text-slate-300">
-              <strong>Login URL:</strong>
-            </p>
-            <p className="text-sm text-miboTeal mt-1 font-mono">
-              {window.location.origin}/login
-            </p>
+            {selectedStaff.centreName && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Centre
+                </label>
+                <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                  {selectedStaff.centreName}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Status
+              </label>
+              <Badge variant={selectedStaff.isActive ? "success" : "danger"}>
+                {selectedStaff.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+
+            <Button
+              variant="primary"
+              onClick={() => {
+                setShowDetailsModal(false);
+                setSelectedStaff(null);
+              }}
+              className="w-full mt-4"
+            >
+              Close
+            </Button>
           </div>
-
-          <Button
-            variant="primary"
-            onClick={() => {
-              setShowCredentialsModal(false);
-              setNewCredentials(null);
-              setShowPassword(false);
-            }}
-            className="w-full"
-          >
-            I've Saved the Credentials
-          </Button>
-        </div>
+        )}
       </Modal>
     </div>
   );

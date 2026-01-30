@@ -8,11 +8,13 @@ import Card from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
 import toast from "react-hot-toast";
 import analyticsService from "../../../services/analyticsService";
+import appointmentService from "../../../services/appointmentService";
 import type { DashboardMetrics } from "../../../types";
 
 const DashboardPage: React.FC = () => {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [topDoctorsData, setTopDoctorsData] = useState<any[]>([]);
+  const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
   const [revenueChartData, setRevenueChartData] = useState<any[]>([]);
   const [leadsChartData, setLeadsChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,151 +27,155 @@ const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Set a timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 5000)
-      );
-
-      const dataPromise = Promise.all([
-        analyticsService.getDashboardMetrics(),
-        analyticsService.getTopDoctors(),
-        analyticsService.getRevenueData("month"),
-        analyticsService.getLeadsBySource(),
+      const [
+        metricsData,
+        doctorsData,
+        revenueDataRes,
+        leadsDataRes,
+        appointmentsData,
+      ] = await Promise.all([
+        analyticsService.getDashboardMetrics().catch(() => null),
+        analyticsService.getTopDoctors().catch(() => []),
+        analyticsService.getRevenueData("month").catch(() => []),
+        analyticsService.getLeadsBySource().catch(() => []),
+        appointmentService.getAllAppointments().catch(() => []),
       ]);
 
-      const [metricsData, doctorsData, revenueDataRes, leadsDataRes] =
-        (await Promise.race([dataPromise, timeoutPromise])) as any;
-
       setMetrics(metricsData);
-      setTopDoctorsData(doctorsData);
-      setRevenueChartData(revenueDataRes);
-      setLeadsChartData(leadsDataRes);
+      setTopDoctorsData(doctorsData || []);
+      setRevenueChartData(revenueDataRes || []);
+      setLeadsChartData(leadsDataRes || []);
+
+      // Get recent 5 appointments
+      if (appointmentsData && appointmentsData.length > 0) {
+        const sorted = [...appointmentsData]
+          .sort(
+            (a, b) =>
+              new Date(b.scheduledStartAt).getTime() -
+              new Date(a.scheduledStartAt).getTime(),
+          )
+          .slice(0, 5);
+        setRecentAppointments(sorted);
+      } else {
+        setRecentAppointments([]);
+      }
     } catch (error: any) {
       console.error("Dashboard data fetch error:", error);
-      toast.error("Using demo data - backend not connected");
-      // Set fallback data
-      setMetrics({
-        totalPatients: 11238,
-        totalPatientsChange: 45,
-        activeDoctors: 238,
-        activeDoctorsChange: 21,
-        followUpsBooked: 182,
-        followUpsBookedChange: 12,
-        totalRevenue: 1643205,
-        totalRevenueChange: 32,
-      });
-      setTopDoctorsData(fallbackTopDoctors);
-      setRevenueChartData(fallbackRevenueData);
-      setLeadsChartData(fallbackLeadsData);
+      toast.error("Failed to load dashboard data");
+      // Set empty data
+      setMetrics(null);
+      setTopDoctorsData([]);
+      setRevenueChartData([]);
+      setLeadsChartData([]);
+      setRecentAppointments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fallback data
-  const fallbackLeadsData = [
-    { label: "Website", value: 400, color: "#3b82f6" },
-    { label: "Phone", value: 300, color: "#2CA5A9" },
-    { label: "Direct", value: 300, color: "#f59e0b" },
-    { label: "Referrals", value: 200, color: "#8b5cf6" },
-  ];
-
-  const fallbackRevenueData = [
-    { date: "Jan", value: 12000 },
-    { date: "Feb", value: 19000 },
-    { date: "Mar", value: 15000 },
-    { date: "Apr", value: 25000 },
-    { date: "May", value: 22000 },
-    { date: "Jun", value: 30000 },
-  ];
-
-  const fallbackTopDoctors = [
-    {
-      id: "1",
-      name: "Dr. Elvia Thomas",
-      specialty: "Adult Therapist",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      patientCount: 368,
-    },
-    {
-      id: "2",
-      name: "Dr. Linnie Nelson",
-      specialty: "Child Therapist",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      patientCount: 325,
-    },
-    {
-      id: "3",
-      name: "Dr. Ranjit Singh",
-      specialty: "Psychiatrist",
-      avatar: "https://i.pravatar.cc/150?img=3",
-      patientCount: 299,
-    },
-    {
-      id: "4",
-      name: "Dr. Nyla Gupta",
-      specialty: "Couple Therapist",
-      avatar: "https://i.pravatar.cc/150?img=4",
-      patientCount: 251,
-    },
-  ];
-
   const stats = metrics
     ? [
         {
           title: "Total Patients",
-          value: metrics.totalPatients.toLocaleString(),
+          value:
+            metrics.totalPatients > 0
+              ? metrics.totalPatients.toLocaleString()
+              : "-",
           icon: Users,
-          trend: {
-            value: metrics.totalPatientsChange,
-            direction: (metrics.totalPatientsChange >= 0 ? "up" : "down") as
-              | "up"
-              | "down",
-            period: "this month",
-          },
+          trend:
+            metrics.totalPatients > 0
+              ? {
+                  value: metrics.totalPatientsChange,
+                  direction: (metrics.totalPatientsChange >= 0
+                    ? "up"
+                    : "down") as "up" | "down",
+                  period: "this month",
+                }
+              : undefined,
           iconColor: "text-blue-400",
         },
         {
           title: "Active Doctors",
-          value: metrics.activeDoctors.toString(),
+          value:
+            metrics.activeDoctors > 0 ? metrics.activeDoctors.toString() : "-",
           icon: Stethoscope,
-          trend: {
-            value: metrics.activeDoctorsChange,
-            direction: (metrics.activeDoctorsChange >= 0 ? "up" : "down") as
-              | "up"
-              | "down",
-            period: "this month",
-          },
+          trend:
+            metrics.activeDoctors > 0
+              ? {
+                  value: metrics.activeDoctorsChange,
+                  direction: (metrics.activeDoctorsChange >= 0
+                    ? "up"
+                    : "down") as "up" | "down",
+                  period: "this month",
+                }
+              : undefined,
           iconColor: "text-miboTeal",
         },
         {
           title: "Follow Ups Booked",
-          value: metrics.followUpsBooked.toString(),
+          value:
+            metrics.followUpsBooked > 0
+              ? metrics.followUpsBooked.toString()
+              : "-",
           icon: Calendar,
-          trend: {
-            value: metrics.followUpsBookedChange,
-            direction: (metrics.followUpsBookedChange >= 0 ? "up" : "down") as
-              | "up"
-              | "down",
-            period: "this month",
-          },
+          trend:
+            metrics.followUpsBooked > 0
+              ? {
+                  value: metrics.followUpsBookedChange,
+                  direction: (metrics.followUpsBookedChange >= 0
+                    ? "up"
+                    : "down") as "up" | "down",
+                  period: "this month",
+                }
+              : undefined,
           iconColor: "text-yellow-400",
         },
         {
           title: "Total Revenue",
-          value: `₹${metrics.totalRevenue.toLocaleString()}`,
+          value:
+            metrics.totalRevenue > 0
+              ? `₹${metrics.totalRevenue.toLocaleString()}`
+              : "-",
           icon: IndianRupee,
-          trend: {
-            value: metrics.totalRevenueChange,
-            direction: (metrics.totalRevenueChange >= 0 ? "up" : "down") as
-              | "up"
-              | "down",
-            period: "this month",
-          },
+          trend:
+            metrics.totalRevenue > 0
+              ? {
+                  value: metrics.totalRevenueChange,
+                  direction: (metrics.totalRevenueChange >= 0
+                    ? "up"
+                    : "down") as "up" | "down",
+                  period: "this month",
+                }
+              : undefined,
           iconColor: "text-green-400",
         },
       ]
-    : [];
+    : [
+        {
+          title: "Total Patients",
+          value: "-",
+          icon: Users,
+          iconColor: "text-blue-400",
+        },
+        {
+          title: "Active Doctors",
+          value: "-",
+          icon: Stethoscope,
+          iconColor: "text-miboTeal",
+        },
+        {
+          title: "Follow Ups Booked",
+          value: "-",
+          icon: Calendar,
+          iconColor: "text-yellow-400",
+        },
+        {
+          title: "Total Revenue",
+          value: "-",
+          icon: IndianRupee,
+          iconColor: "text-green-400",
+        },
+      ];
 
   if (loading) {
     return (
@@ -210,50 +216,107 @@ const DashboardPage: React.FC = () => {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DonutChart data={leadsChartData} title="Leads by Source" />
-        <TopDoctorsCard doctors={topDoctorsData} />
+        {leadsChartData.length > 0 ? (
+          <DonutChart data={leadsChartData} title="Leads by Source" />
+        ) : (
+          <Card>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Leads by Source
+            </h3>
+            <div className="flex items-center justify-center h-64 text-slate-400">
+              No data available
+            </div>
+          </Card>
+        )}
+
+        {topDoctorsData.length > 0 ? (
+          <TopDoctorsCard doctors={topDoctorsData} />
+        ) : (
+          <Card>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Top Doctors
+            </h3>
+            <div className="flex items-center justify-center h-64 text-slate-400">
+              No doctors data available
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Revenue Analytics */}
-      <AreaChartComponent
-        data={revenueChartData}
-        title="Revenue Analytics"
-        color="#2CA5A9"
-      />
+      {revenueChartData.length > 0 ? (
+        <AreaChartComponent
+          data={revenueChartData}
+          title="Revenue Analytics"
+          color="#2CA5A9"
+        />
+      ) : (
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            Revenue Analytics
+          </h3>
+          <div className="flex items-center justify-center h-64 text-slate-400">
+            No revenue data available
+          </div>
+        </Card>
+      )}
 
       {/* Recent Activity */}
       <Card>
         <h3 className="text-lg font-semibold text-white mb-4">
           Recent Appointments
         </h3>
-        <div className="space-y-3">
-          {[1, 2, 3].map((_, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-miboTeal to-miboDeepBlue flex items-center justify-center text-sm font-semibold">
-                  P{index + 1}
+        {recentAppointments.length > 0 ? (
+          <div className="space-y-3">
+            {recentAppointments.map((apt, index) => (
+              <div
+                key={apt.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-miboTeal to-miboDeepBlue flex items-center justify-center text-sm font-semibold">
+                    {apt.patientName
+                      ? apt.patientName.charAt(0).toUpperCase()
+                      : "?"}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      {apt.patientName || "Unknown Patient"}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Appointment with{" "}
+                      {apt.clinicianName || "Unknown Clinician"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    Patient {index + 1}
+                <div className="text-right">
+                  <p className="text-sm text-slate-300">
+                    {new Date(apt.scheduledStartAt).toLocaleDateString()} at{" "}
+                    {new Date(apt.scheduledStartAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
-                  <p className="text-xs text-slate-400">
-                    Appointment with Dr. Smith
-                  </p>
+                  <span
+                    className={`inline-block px-2 py-0.5 text-xs rounded-full ${
+                      apt.status === "CONFIRMED"
+                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                        : apt.status === "BOOKED"
+                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                          : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
+                    }`}
+                  >
+                    {apt.status}
+                  </span>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-slate-300">Today, 2:30 PM</p>
-                <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
-                  Confirmed
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-32 text-slate-400">
+            No recent appointments
+          </div>
+        )}
       </Card>
     </div>
   );

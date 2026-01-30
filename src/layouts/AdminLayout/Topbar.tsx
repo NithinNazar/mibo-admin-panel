@@ -1,11 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Bell, Settings, LogOut } from "lucide-react";
-// import { useAuth } from "../../contexts/AuthContext"; // Uncomment when auth is enabled
+import { useAuth } from "../../contexts/AuthContext";
 
 const Topbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // const { logout } = useAuth(); // Uncomment when auth is enabled
+  const { logout, user } = useAuth();
 
   const pageTitle = (() => {
     if (location.pathname.startsWith("/patients")) return "Patients";
@@ -25,9 +25,14 @@ const Topbar: React.FC = () => {
   })();
 
   const handleLogout = async () => {
-    // When auth is enabled, uncomment this:
-    // await logout();
-    navigate("/login");
+    try {
+      await logout();
+      // Navigation is handled by logout function in AuthContext
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force navigation even if logout fails
+      navigate("/login");
+    }
   };
 
   return (
@@ -56,11 +61,20 @@ const Topbar: React.FC = () => {
         {/* User Profile */}
         <div className="flex items-center gap-2 pl-3 border-l border-white/10">
           <div className="text-right text-xs hidden md:block">
-            <div className="font-medium text-slate-100">Super Admin</div>
-            <div className="text-[10px] text-slate-400">Admin</div>
+            <div className="font-medium text-slate-100">
+              {user?.full_name || "Admin"}
+            </div>
+            <div className="text-[10px] text-slate-400">
+              {user?.roles?.[0]?.name || "Admin"}
+            </div>
           </div>
           <div className="h-9 w-9 rounded-full bg-gradient-to-br from-miboTeal to-miboDeepBlue flex items-center justify-center text-sm font-semibold cursor-pointer hover:ring-2 ring-miboTeal transition-all">
-            SA
+            {user?.full_name
+              ?.split(" ")
+              .map((n) => n[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2) || "AD"}
           </div>
         </div>
 

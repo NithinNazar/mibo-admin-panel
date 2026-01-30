@@ -7,11 +7,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        miboBg: "#293346",      // main dark background
-        miboTeal: "#2CA5A9",    // teal accent
-        miboDeepBlue: "#2a1470", // deep blue accent
-        miboCardBg: "#1e2836",  // card background
-        miboSidebarBg: "#1d2635", // sidebar background
+        miboBg: "#4a5a73",      // main background (50% lighter)
+        miboTeal: "#2CA5A9",    // teal accent (keep same)
+        miboDeepBlue: "#2a1470", // deep blue accent (keep same)
+        miboCardBg: "#3d4d63",  // card background (50% lighter)
+        miboSidebarBg: "#3a4a5f", // sidebar background (50% lighter)
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

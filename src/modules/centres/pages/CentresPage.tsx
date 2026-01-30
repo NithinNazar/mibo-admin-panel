@@ -5,9 +5,23 @@ import Table from "../../../components/ui/Table";
 import Modal from "../../../components/ui/Modal";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
-import { Plus, Edit, Trash2, MapPin, Phone } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  MapPin,
+  Phone,
+  Download,
+  FileText,
+  Printer,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import centreService from "../../../services/centreService";
+import {
+  exportToCSV,
+  exportToPDF,
+  printTable,
+} from "../../../utils/exportHelpers";
 import type {
   CreateCentreRequest,
   UpdateCentreRequest,
@@ -93,7 +107,7 @@ const CentresPage: React.FC = () => {
       if (editingCentre) {
         await centreService.updateCentre(
           editingCentre.id,
-          formData as UpdateCentreRequest
+          formData as UpdateCentreRequest,
         );
         toast.success("Centre updated successfully");
       } else {
@@ -107,16 +121,55 @@ const CentresPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this centre?")) return;
-
+  const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      await centreService.deleteCentre(id);
-      toast.success("Centre deleted successfully");
+      await centreService.toggleActive(id, isActive);
+      toast.success(
+        `Centre ${isActive ? "activated" : "deactivated"} successfully`,
+      );
       fetchCentres();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete centre");
+      toast.error(
+        error.response?.data?.message || "Failed to update centre status",
+      );
     }
+  };
+
+  const handleExportCSV = () => {
+    const csvData = centres.map((centre) => ({
+      Name: centre.name,
+      City: centre.city,
+      Address: centre.address,
+      Phone: centre.phone,
+      Status: centre.isActive ? "Active" : "Inactive",
+    }));
+    exportToCSV(csvData, "centres");
+    toast.success("Exported to CSV successfully");
+  };
+
+  const handleExportPDF = () => {
+    const headers = ["Name", "City", "Address", "Phone", "Status"];
+    const rows = centres.map((centre) => [
+      centre.name,
+      centre.city,
+      centre.address,
+      centre.phone,
+      centre.isActive ? "Active" : "Inactive",
+    ]);
+    exportToPDF(headers, rows, "Centres List");
+    toast.success("Exported to PDF successfully");
+  };
+
+  const handlePrint = () => {
+    const headers = ["Name", "City", "Address", "Phone", "Status"];
+    const rows = centres.map((centre) => [
+      centre.name,
+      centre.city,
+      centre.address,
+      centre.phone,
+      centre.isActive ? "Active" : "Inactive",
+    ]);
+    printTable(headers, rows, "Centres List");
   };
 
   const columns = [
@@ -169,7 +222,7 @@ const CentresPage: React.FC = () => {
       key: "actions",
       header: "Actions",
       render: (centre: Centre) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Button
             variant="secondary"
             size="sm"
@@ -177,13 +230,17 @@ const CentresPage: React.FC = () => {
           >
             <Edit size={16} />
           </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => handleDelete(centre.id)}
-          >
-            <Trash2 size={16} />
-          </Button>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={centre.isActive}
+              onChange={() => handleToggleActive(centre.id, !centre.isActive)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-miboTeal focus:ring-miboTeal cursor-pointer"
+            />
+            <span className="text-xs text-slate-400">
+              {centre.isActive ? "Active" : "Inactive"}
+            </span>
+          </label>
         </div>
       ),
     },
@@ -201,6 +258,39 @@ const CentresPage: React.FC = () => {
           Add Centre
         </Button>
       </div>
+
+      {/* Export Buttons */}
+      {centres.length > 0 && (
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportCSV}
+            className="flex items-center gap-2"
+          >
+            <Download size={16} />
+            Export CSV
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportPDF}
+            className="flex items-center gap-2"
+          >
+            <FileText size={16} />
+            Export PDF
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-2"
+          >
+            <Printer size={16} />
+            Print
+          </Button>
+        </div>
+      )}
 
       <Card>
         {loading ? (

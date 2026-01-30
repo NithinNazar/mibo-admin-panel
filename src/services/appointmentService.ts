@@ -43,9 +43,15 @@ export interface MyAppointmentsResponse {
 }
 
 class AppointmentService {
+  // Get all appointments (no filters)
+  async getAllAppointments(): Promise<Appointment[]> {
+    const response = await api.get("/appointments");
+    return response.data.data || response.data;
+  }
+
   // Get appointments with filters
   async getAppointments(
-    params?: GetAppointmentsParams
+    params?: GetAppointmentsParams,
   ): Promise<Appointment[]> {
     const response = await api.get("/appointments", { params });
     return response.data.data || response.data;
@@ -59,7 +65,7 @@ class AppointmentService {
 
   // Create new appointment
   async createAppointment(
-    data: CreateAppointmentRequest
+    data: CreateAppointmentRequest,
   ): Promise<Appointment> {
     const response = await api.post("/appointments", data);
     return response.data.data || response.data;
@@ -68,7 +74,7 @@ class AppointmentService {
   // Update appointment
   async updateAppointment(
     id: string,
-    data: UpdateAppointmentRequest
+    data: UpdateAppointmentRequest,
   ): Promise<Appointment> {
     const response = await api.put(`/appointments/${id}`, data);
     return response.data.data || response.data;
@@ -83,7 +89,7 @@ class AppointmentService {
 
   // Check availability
   async checkAvailability(
-    params: CheckAvailabilityParams
+    params: CheckAvailabilityParams,
   ): Promise<{ available: boolean; slots: any[] }> {
     const response = await api.get("/appointments/availability", { params });
     return response.data.data || response.data;
@@ -92,26 +98,6 @@ class AppointmentService {
   // Get clinician's own appointments (for CLINICIAN role)
   async getMyAppointments(): Promise<MyAppointmentsResponse> {
     const response = await api.get("/appointments/my-appointments");
-    return response.data.data || response.data;
-  }
-
-  // Reschedule appointment
-  async rescheduleAppointment(
-    id: string,
-    newStartTime: string
-  ): Promise<Appointment> {
-    const response = await api.put(`/appointments/${id}/reschedule`, {
-      scheduledStartAt: newStartTime,
-    });
-    return response.data.data || response.data;
-  }
-
-  // Update appointment status
-  async updateStatus(
-    id: string,
-    status: AppointmentStatus
-  ): Promise<Appointment> {
-    const response = await api.put(`/appointments/${id}/status`, { status });
     return response.data.data || response.data;
   }
 }

@@ -29,15 +29,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const checkAuth = async () => {
       try {
         if (authService.isAuthenticated()) {
-          // Use stored user
-          const storedUser = authService.getStoredUser();
-          if (storedUser) {
-            setUser(storedUser);
+          // Validate token by fetching current user
+          try {
+            const currentUser = await authService.getCurrentUser();
+            setUser(currentUser);
+          } catch (error) {
+            // Token is invalid or expired, clear auth data
+            console.error("Token validation failed:", error);
+            authService.logout();
+            setUser(null);
           }
         }
       } catch (error) {
         console.error("Auth check failed:", error);
         authService.logout();
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -95,9 +101,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await authService.logout();
       setUser(null);
+      // Redirect to login page after logout
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout failed:", error);
-      throw error;
+      // Even if logout API fails, clear local state and redirect
+      setUser(null);
+      authService.logout(); // This will clear localStorage
+      window.location.href = "/login";
     }
   };
 

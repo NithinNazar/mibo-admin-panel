@@ -6,9 +6,25 @@ import Table from "../../../components/ui/Table";
 import Modal from "../../../components/ui/Modal";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
-import { Plus, Search, Edit, Eye, User, Phone, Mail } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Eye,
+  User,
+  Phone,
+  Mail,
+  Download,
+  FileText,
+  Printer,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import patientService from "../../../services/patientService";
+import {
+  exportToCSV,
+  exportToPDF,
+  printTable,
+} from "../../../utils/exportHelpers";
 import type {
   CreatePatientRequest,
   UpdatePatientRequest,
@@ -49,7 +65,7 @@ const PatientsListPage: React.FC = () => {
         (patient) =>
           patient.fullName.toLowerCase().includes(query) ||
           patient.phone.includes(query) ||
-          (patient.email && patient.email.toLowerCase().includes(query))
+          (patient.email && patient.email.toLowerCase().includes(query)),
       );
       setFilteredPatients(filtered);
     }
@@ -119,7 +135,7 @@ const PatientsListPage: React.FC = () => {
       if (editingPatient) {
         await patientService.updatePatient(
           editingPatient.id,
-          formData as UpdatePatientRequest
+          formData as UpdatePatientRequest,
         );
         toast.success("Patient updated successfully");
       } else {
@@ -131,6 +147,63 @@ const PatientsListPage: React.FC = () => {
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Operation failed");
     }
+  };
+
+  const handleExportCSV = () => {
+    const csvData = filteredPatients.map((patient) => ({
+      Name: patient.fullName,
+      Phone: patient.phone,
+      Email: patient.email || "N/A",
+      Gender: patient.gender || "Not specified",
+      "Blood Group": patient.bloodGroup || "N/A",
+      "Date of Birth": patient.dateOfBirth
+        ? new Date(patient.dateOfBirth).toLocaleDateString()
+        : "N/A",
+      Status: patient.isActive ? "Active" : "Inactive",
+    }));
+    exportToCSV(csvData, "patients");
+    toast.success("Exported to CSV successfully");
+  };
+
+  const handleExportPDF = () => {
+    const headers = [
+      "Name",
+      "Phone",
+      "Email",
+      "Gender",
+      "Blood Group",
+      "Status",
+    ];
+    const rows = filteredPatients.map((patient) => [
+      patient.fullName,
+      patient.phone,
+      patient.email || "N/A",
+      patient.gender || "Not specified",
+      patient.bloodGroup || "N/A",
+      patient.isActive ? "Active" : "Inactive",
+    ]);
+    exportToPDF(headers, rows, "Patients List");
+    toast.success("Exported to PDF successfully");
+  };
+
+  const handlePrint = () => {
+    const headers = [
+      "Name",
+      "Phone",
+      "Email",
+      "Gender",
+      "Blood Group",
+      "Status",
+    ];
+    const rows = filteredPatients.map((patient) => [
+      patient.fullName,
+      patient.phone,
+      patient.email || "N/A",
+      patient.gender || "Not specified",
+      patient.bloodGroup || "N/A",
+      patient.isActive ? "Active" : "Inactive",
+    ]);
+    printTable(headers, rows, "Patients List");
   };
 
   const columns = [
@@ -257,6 +330,39 @@ const PatientsListPage: React.FC = () => {
           />
         </div>
       </Card>
+
+      {/* Export Buttons */}
+      {filteredPatients.length > 0 && (
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportCSV}
+            className="flex items-center gap-2"
+          >
+            <Download size={16} />
+            Export CSV
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportPDF}
+            className="flex items-center gap-2"
+          >
+            <FileText size={16} />
+            Export PDF
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePrint}
+            className="flex items-center gap-2"
+          >
+            <Printer size={16} />
+            Print
+          </Button>
+        </div>
+      )}
 
       {/* Patients Table */}
       <Card>

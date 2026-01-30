@@ -12,10 +12,12 @@ export type UserType = "PATIENT" | "STAFF";
 export interface User {
   id: string;
   name: string;
+  full_name?: string; // Backend returns full_name
   email?: string;
   phone: string;
   username?: string;
   role: UserRole;
+  roles?: Array<{ id: number; name: string }>; // Backend also includes roles array
   avatar?: string;
   centreIds: string[];
   assignedCentreId?: string; // Primary centre for FRONT_DESK and CENTRE_MANAGER
@@ -120,6 +122,10 @@ export interface Clinician {
   consultationModes: ConsultationMode[];
   defaultDurationMinutes: number;
   profilePictureUrl?: string;
+  designation?: string;
+  qualification?: string;
+  expertise?: string[];
+  languages?: string[];
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;

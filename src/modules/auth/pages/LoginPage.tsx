@@ -5,6 +5,7 @@ import Button from "../../../components/ui/Button";
 import Input from "../../../components/ui/Input";
 import { Phone, Lock, User, KeyRound } from "lucide-react";
 import toast from "react-hot-toast";
+import logo from "../../../assets/logo1.png";
 
 type AuthMethod = "phone-otp" | "phone-password" | "username-password";
 
@@ -96,19 +97,23 @@ const LoginPage: React.FC = () => {
       console.error("Error response:", error.response?.data);
 
       toast.error(
-        error.response?.data?.message || error.message || "Login failed"
+        error.response?.data?.message || error.message || "Login failed",
       );
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-miboBg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#4a5a73] to-[#3d4d63] flex items-center justify-center p-4">
       <Card className="w-full max-w-md" padding="lg">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-miboTeal to-miboDeepBlue flex items-center justify-center mb-4">
-            <span className="text-white font-bold text-2xl">M</span>
+          <div className="w-20 h-20 mx-auto mb-4 bg-white rounded-xl p-2 flex items-center justify-center shadow-lg">
+            <img
+              src={logo}
+              alt="Mibo Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           <h1 className="text-2xl font-bold text-white">Mibo Care Admin</h1>
           <p className="text-slate-400 text-sm mt-2">Sign in to your account</p>

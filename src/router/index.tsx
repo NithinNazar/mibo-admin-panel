@@ -14,6 +14,7 @@ import PatientDetailsPage from "../modules/patients/pages/PatientDetailsPage";
 
 // Appointments
 import BookAppointmentPage from "../modules/appointments/pages/BookAppointmentPage";
+import AllAppointmentsPage from "../modules/appointments/pages/AllAppointmentsPage";
 import CentreAppointmentsPage from "../modules/appointments/pages/CentreAppointmentsPage";
 import ClinicianAppointmentsPage from "../modules/appointments/pages/ClinicianAppointmentsPage";
 import FrontDeskBookingPage from "../modules/appointments/pages/FrontDeskBookingPage";
@@ -66,6 +67,7 @@ function AppRouter() {
         {/* Main */}
         <Route path="patients" element={<PatientsListPage />} />
         <Route path="patients/:id" element={<PatientDetailsPage />} />
+        <Route path="appointments" element={<AllAppointmentsPage />} />
         <Route path="book-appointment" element={<BookAppointmentPage />} />
         <Route path="front-desk-booking" element={<FrontDeskBookingPage />} />
         <Route path="centres" element={<CentresPage />} />

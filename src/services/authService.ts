@@ -87,7 +87,11 @@ class AuthService {
   // Get current user
   async getCurrentUser(): Promise<User> {
     const response = await api.get("/auth/me");
-    return response.data;
+    // Backend returns { success: true, data: { user } }
+    const data = response.data.data || response.data;
+    const user = data.user || data;
+    console.log("getCurrentUser - extracted user:", user);
+    return user;
   }
 
   // Helper: Set auth data in localStorage

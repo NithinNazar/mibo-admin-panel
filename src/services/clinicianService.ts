@@ -59,7 +59,7 @@ class ClinicianService {
   // Update clinician
   async updateClinician(
     id: string,
-    data: UpdateClinicianRequest
+    data: UpdateClinicianRequest,
   ): Promise<Clinician> {
     const response = await api.put(`/clinicians/${id}`, data);
     return response.data.data || response.data;
@@ -70,45 +70,29 @@ class ClinicianService {
     await api.delete(`/clinicians/${id}`);
   }
 
+  // Toggle clinician active status
+  async toggleActive(id: string, isActive: boolean): Promise<Clinician> {
+    const response = await api.patch(`/clinicians/${id}/toggle-active`, {
+      isActive,
+    });
+    return response.data.data || response.data;
+  }
+
   // Get clinician availability
-  async getAvailability(params: GetAvailabilityParams): Promise<TimeSlot[]> {
-    const { clinicianId, ...queryParams } = params;
-    const response = await api.get(`/clinicians/${clinicianId}/availability`, {
-      params: queryParams,
-    });
+  async getAvailability(clinicianId: string): Promise<AvailabilityRule[]> {
+    const response = await api.get(`/clinicians/${clinicianId}/availability`);
     return response.data.data || response.data;
   }
 
-  // Set clinician availability rules
-  async setAvailability(
+  // Update clinician availability (bulk update all rules)
+  async updateAvailability(
     clinicianId: string,
-    rules: Omit<AvailabilityRule, "id" | "clinicianId">[]
+    rules: Omit<AvailabilityRule, "id" | "clinicianId">[],
   ): Promise<AvailabilityRule[]> {
-    const response = await api.post(`/clinicians/${clinicianId}/availability`, {
-      rules,
+    const response = await api.put(`/clinicians/${clinicianId}/availability`, {
+      availability_rules: rules,
     });
     return response.data.data || response.data;
-  }
-
-  // Update availability rule
-  async updateAvailabilityRule(
-    clinicianId: string,
-    ruleId: string,
-    data: Partial<AvailabilityRule>
-  ): Promise<AvailabilityRule> {
-    const response = await api.put(
-      `/clinicians/${clinicianId}/availability/${ruleId}`,
-      data
-    );
-    return response.data.data || response.data;
-  }
-
-  // Delete availability rule
-  async deleteAvailabilityRule(
-    clinicianId: string,
-    ruleId: string
-  ): Promise<void> {
-    await api.delete(`/clinicians/${clinicianId}/availability/${ruleId}`);
   }
 }
 
