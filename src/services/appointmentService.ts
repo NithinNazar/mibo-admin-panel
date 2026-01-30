@@ -100,6 +100,17 @@ class AppointmentService {
     const response = await api.get("/appointments/my-appointments");
     return response.data.data || response.data;
   }
+
+  // Reschedule appointment
+  async rescheduleAppointment(
+    id: string,
+    newDateTime: string,
+  ): Promise<Appointment> {
+    const response = await api.patch(`/appointments/${id}/reschedule`, {
+      scheduledStartAt: newDateTime,
+    });
+    return response.data.data || response.data;
+  }
 }
 
 export default new AppointmentService();

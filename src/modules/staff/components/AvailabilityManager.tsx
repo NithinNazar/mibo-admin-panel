@@ -82,7 +82,7 @@ const AvailabilityManager: React.FC<AvailabilityManagerProps> = ({
   const updateRule = (
     index: number,
     field: keyof Omit<AvailabilityRule, "id" | "clinicianId">,
-    value: any
+    value: any,
   ) => {
     const newRules = [...rules];
     newRules[index] = { ...newRules[index], [field]: value };
@@ -106,11 +106,11 @@ const AvailabilityManager: React.FC<AvailabilityManagerProps> = ({
 
     try {
       setLoading(true);
-      await clinicianService.setAvailability(clinicianId, rules);
+      await clinicianService.updateAvailability(clinicianId, rules);
       toast.success("Availability rules saved successfully");
     } catch (error: any) {
       toast.error(
-        error.response?.data?.message || "Failed to save availability"
+        error.response?.data?.message || "Failed to save availability",
       );
     } finally {
       setLoading(false);
@@ -207,7 +207,7 @@ const AvailabilityManager: React.FC<AvailabilityManagerProps> = ({
                   updateRule(
                     index,
                     "slotDurationMinutes",
-                    parseInt(e.target.value) || 30
+                    parseInt(e.target.value) || 30,
                   )
                 }
                 min={15}

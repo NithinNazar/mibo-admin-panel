@@ -11,8 +11,6 @@ import {
   Printer,
   User,
   Plus,
-  Eye,
-  EyeOff,
   Copy,
   Check,
 } from "lucide-react";
@@ -41,7 +39,6 @@ const ManagersPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Form state
@@ -424,7 +421,6 @@ const ManagersPage: React.FC = () => {
         onClose={() => {
           setShowDetailsModal(false);
           setSelectedManager(null);
-          setShowPassword(false);
         }}
         title="Manager Details"
       >
@@ -499,7 +495,6 @@ const ManagersPage: React.FC = () => {
               onClick={() => {
                 setShowDetailsModal(false);
                 setSelectedManager(null);
-                setShowPassword(false);
               }}
               className="w-full mt-4"
             >

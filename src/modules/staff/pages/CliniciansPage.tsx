@@ -6,7 +6,7 @@ import Modal from "../../../components/ui/Modal";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import Badge from "../../../components/ui/Badge";
-import { Plus, Edit, DollarSign, Award, Copy, Check } from "lucide-react";
+import { Plus, Edit, DollarSign, Award } from "lucide-react";
 import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
 import centreService from "../../../services/centreService";
@@ -24,7 +24,6 @@ const CliniciansPage: React.FC = () => {
   const [editingClinician, setEditingClinician] = useState<Clinician | null>(
     null,
   );
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     // User fields
     full_name: "",
@@ -226,17 +225,6 @@ const CliniciansPage: React.FC = () => {
       setShowDetailsModal(true);
     } catch (error: any) {
       toast.error("Failed to fetch clinician details");
-    }
-  };
-
-  const copyToClipboard = async (text: string, field: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedField(field);
-      toast.success(`${field} copied to clipboard`);
-      setTimeout(() => setCopiedField(null), 2000);
-    } catch (error) {
-      toast.error("Failed to copy to clipboard");
     }
   };
 

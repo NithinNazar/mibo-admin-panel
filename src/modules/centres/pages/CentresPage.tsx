@@ -8,7 +8,6 @@ import Select from "../../../components/ui/Select";
 import {
   Plus,
   Edit,
-  Trash2,
   MapPin,
   Phone,
   Download,
@@ -169,7 +168,7 @@ const CentresPage: React.FC = () => {
       centre.phone,
       centre.isActive ? "Active" : "Inactive",
     ]);
-    printTable(headers, rows, "Centres List");
+    printTable("Centres List", headers, rows);
   };
 
   const columns = [

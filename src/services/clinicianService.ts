@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Clinician, AvailabilityRule, TimeSlot } from "../types";
+import type { Clinician, AvailabilityRule } from "../types";
 
 export interface CreateClinicianRequest {
   userId: number;
@@ -24,6 +24,9 @@ export interface UpdateClinicianRequest {
   consultationModes?: string[];
   defaultDurationMinutes?: number;
   profilePictureUrl?: string;
+  qualification?: string;
+  expertise?: string[];
+  languages?: string[];
 }
 
 export interface GetCliniciansParams {
@@ -79,8 +82,18 @@ class ClinicianService {
   }
 
   // Get clinician availability
-  async getAvailability(clinicianId: string): Promise<AvailabilityRule[]> {
-    const response = await api.get(`/clinicians/${clinicianId}/availability`);
+  async getAvailability(
+    params: GetAvailabilityParams,
+  ): Promise<AvailabilityRule[]> {
+    const response = await api.get(
+      `/clinicians/${params.clinicianId}/availability`,
+      {
+        params: {
+          centreId: params.centreId,
+          date: params.date,
+        },
+      },
+    );
     return response.data.data || response.data;
   }
 

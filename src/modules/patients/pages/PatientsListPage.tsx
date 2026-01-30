@@ -203,7 +203,7 @@ const PatientsListPage: React.FC = () => {
       patient.bloodGroup || "N/A",
       patient.isActive ? "Active" : "Inactive",
     ]);
-    printTable(headers, rows, "Patients List");
+    printTable("Patients List", headers, rows);
   };
 
   const columns = [

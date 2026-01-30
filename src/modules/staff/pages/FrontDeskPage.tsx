@@ -4,7 +4,7 @@ import Button from "../../../components/ui/Button";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import Modal from "../../../components/ui/Modal";
-import Table from "../../../components/ui/Table";
+import Table, { type TableColumn } from "../../../components/ui/Table";
 import Badge from "../../../components/ui/Badge";
 import {
   Plus,
@@ -135,7 +135,7 @@ const FrontDeskPage: React.FC = () => {
       s.centreName,
       s.isActive ? "Active" : "Inactive",
     ]);
-    printTable(headers, rows, "Front Desk Staff List");
+    printTable("Front Desk Staff List", headers, rows);
   };
 
   const handleCreateStaff = async () => {
@@ -195,75 +195,75 @@ const FrontDeskPage: React.FC = () => {
     }
   };
 
-  const columns = [
+  const columns: TableColumn<FrontDeskStaff>[] = [
     {
+      key: "full_name",
       header: "Name",
-      accessor: "full_name" as keyof FrontDeskStaff,
-      render: (value: string, row: FrontDeskStaff) => (
+      render: (item) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-miboTeal/20 flex items-center justify-center">
             <User size={20} className="text-miboTeal" />
           </div>
           <div>
-            <div className="font-medium text-white">{value}</div>
+            <div className="font-medium text-white">{item.full_name}</div>
             <div className="text-sm text-slate-400">
-              {row.designation || "Front Desk"}
+              {item.designation || "Front Desk"}
             </div>
           </div>
         </div>
       ),
     },
     {
+      key: "phone",
       header: "Phone",
-      accessor: "phone" as keyof FrontDeskStaff,
     },
     {
+      key: "email",
       header: "Email",
-      accessor: "email" as keyof FrontDeskStaff,
-      render: (value: string | undefined) => value || "-",
+      render: (item) => item.email || "-",
     },
     {
+      key: "username",
       header: "Username",
-      accessor: "username" as keyof FrontDeskStaff,
-      render: (value: string | undefined) => (
-        <span className="font-mono">{value || "N/A"}</span>
+      render: (item) => (
+        <span className="font-mono">{item.username || "N/A"}</span>
       ),
     },
     {
+      key: "centreName",
       header: "Centre",
-      accessor: "centreName" as keyof FrontDeskStaff,
-      render: (value: string | undefined) => value || "-",
+      render: (item) => item.centreName || "-",
     },
     {
+      key: "isActive",
       header: "Status",
-      accessor: "isActive" as keyof FrontDeskStaff,
-      render: (value: boolean) => (
-        <Badge variant={value ? "success" : "danger"}>
-          {value ? "Active" : "Inactive"}
+      render: (item) => (
+        <Badge variant={item.isActive ? "success" : "danger"}>
+          {item.isActive ? "Active" : "Inactive"}
         </Badge>
       ),
     },
     {
+      key: "actions",
       header: "Actions",
-      accessor: "id" as keyof FrontDeskStaff,
-      render: (value: string, row: FrontDeskStaff) => (
+      render: (item) => (
         <div className="flex items-center gap-3">
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => handleViewDetails(row)}
+            onClick={() => handleViewDetails(item)}
           >
             View Details
           </Button>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={row.isActive}
-              onChange={() => handleToggleActive(value, !row.isActive)}
+              checked={item.isActive}
+              onChange={() => handleToggleActive(item.id, !item.isActive)}
               className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-miboTeal focus:ring-miboTeal cursor-pointer"
             />
             <span className="text-xs text-slate-400">
-              {row.isActive ? "Active" : "Inactive"}
+              {item.isActive ? "Active" : "Inactive"}
             </span>
           </label>
         </div>
@@ -341,7 +341,11 @@ const FrontDeskPage: React.FC = () => {
             </Button>
           </div>
         ) : (
-          <Table columns={columns} data={staff} />
+          <Table
+            columns={columns}
+            data={staff}
+            keyExtractor={(item) => item.id}
+          />
         )}
       </Card>
 
