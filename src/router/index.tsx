@@ -54,14 +54,24 @@ function AppRouter() {
         }
       />
 
-      {/* Protected admin routes */}
+      {/* Root redirect */}
       <Route
         path="/"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+
+      {/* Protected admin routes */}
+      <Route
         element={
           isAuthenticated ? <AdminLayout /> : <Navigate to="/login" replace />
         }
       >
-        <Route index element={<DashboardPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
 
         {/* Main */}
@@ -96,7 +106,12 @@ function AppRouter() {
       </Route>
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="*"
+        element={
+          <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+        }
+      />
     </Routes>
   );
 }

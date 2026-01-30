@@ -101,14 +101,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await authService.logout();
       setUser(null);
-      // Redirect to login page after logout
-      window.location.href = "/login";
+      // Don't use window.location.href - let React Router handle navigation
     } catch (error) {
       console.error("Logout failed:", error);
-      // Even if logout API fails, clear local state and redirect
+      // Even if logout API fails, clear local state
       setUser(null);
       authService.logout(); // This will clear localStorage
-      window.location.href = "/login";
     }
   };
 

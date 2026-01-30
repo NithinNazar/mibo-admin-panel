@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import Card from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
@@ -11,6 +12,7 @@ type AuthMethod = "phone-otp" | "phone-password" | "username-password";
 
 const LoginPage: React.FC = () => {
   const { login, sendOTP } = useAuth();
+  const navigate = useNavigate();
   const [authMethod, setAuthMethod] = useState<AuthMethod>("phone-password");
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -85,9 +87,9 @@ const LoginPage: React.FC = () => {
       console.log("Attempting navigation to dashboard...");
       console.log("Current path:", window.location.pathname);
 
-      // Force immediate navigation with page reload
+      // Navigate to dashboard using React Router
       console.log("Redirecting to /dashboard");
-      window.location.href = "/dashboard";
+      navigate("/dashboard", { replace: true });
 
       console.log("After redirect call");
     } catch (error: any) {
