@@ -6,11 +6,51 @@ import Modal from "../../../components/ui/Modal";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import Badge from "../../../components/ui/Badge";
+import MultiSelect from "../../../components/ui/MultiSelect";
 import { Plus, Edit, DollarSign, Award } from "lucide-react";
 import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
 import centreService from "../../../services/centreService";
 import type { Clinician, Centre } from "../../../types";
+
+// Indian Languages
+const INDIAN_LANGUAGES = [
+  "English",
+  "Hindi",
+  "Malayalam",
+  "Tamil",
+  "Telugu",
+  "Kannada",
+  "Marathi",
+  "Bengali",
+  "Gujarati",
+  "Punjabi",
+  "Odia",
+  "Urdu",
+  "Assamese",
+];
+
+// Common Expertise Areas
+const EXPERTISE_AREAS = [
+  "Anxiety Disorders",
+  "Depression",
+  "Trauma & PTSD",
+  "Stress Management",
+  "Relationship Issues",
+  "Family Therapy",
+  "Child Psychology",
+  "Adolescent Counseling",
+  "Addiction Counseling",
+  "Grief Counseling",
+  "OCD",
+  "Bipolar Disorder",
+  "Schizophrenia",
+  "Eating Disorders",
+  "Sleep Disorders",
+  "Anger Management",
+  "Career Counseling",
+  "LGBTQ+ Issues",
+];
 
 const CliniciansPage: React.FC = () => {
   const [clinicians, setClinicians] = useState<Clinician[]>([]);
@@ -180,6 +220,7 @@ const CliniciansPage: React.FC = () => {
           email: formData.email || undefined,
           password: formData.password,
           role_ids: [2], // Clinician role ID
+          centre_ids: [formData.primaryCentreId], // Required for user creation
           designation: formData.designation || formData.specialization,
           primary_centre_id: formData.primaryCentreId,
           specialization: formData.specialization,
@@ -615,51 +656,22 @@ const CliniciansPage: React.FC = () => {
               }
             />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Expertise (comma-separated)
-              </label>
-              <Input
-                type="text"
-                placeholder="e.g., Anxiety, Depression, Trauma, PTSD"
-                value={formData.expertise.join(", ")}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    expertise: e.target.value
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-              <p className="text-xs text-slate-400 mt-1">
-                Separate multiple areas with commas
-              </p>
-            </div>
+            <MultiSelect
+              label="Expertise"
+              options={EXPERTISE_AREAS}
+              selectedValues={formData.expertise}
+              onChange={(expertise) => setFormData({ ...formData, expertise })}
+              placeholder="Add area of expertise"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Languages (comma-separated)
-              </label>
-              <Input
-                type="text"
-                placeholder="e.g., English, Hindi, Malayalam, Kannada"
-                value={formData.languages.join(", ")}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    languages: e.target.value
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-              <p className="text-xs text-slate-400 mt-1">
-                Separate multiple languages with commas
-              </p>
-            </div>
+            <MultiSelect
+              label="Languages"
+              options={INDIAN_LANGUAGES}
+              selectedValues={formData.languages}
+              onChange={(languages) => setFormData({ ...formData, languages })}
+              placeholder="Add language"
+              required
+            />
           </div>
 
           <div className="flex gap-3 pt-4">
