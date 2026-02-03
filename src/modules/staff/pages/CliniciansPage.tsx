@@ -69,6 +69,7 @@ const CliniciansPage: React.FC = () => {
     full_name: "",
     phone: "",
     email: "",
+    username: "",
     password: "",
     // Clinician fields
     userId: 0,
@@ -115,6 +116,7 @@ const CliniciansPage: React.FC = () => {
         full_name: "",
         phone: "",
         email: "",
+        username: "",
         password: "",
         userId: parseInt(clinician.userId),
         primaryCentreId: parseInt(clinician.primaryCentreId),
@@ -138,6 +140,7 @@ const CliniciansPage: React.FC = () => {
         full_name: "",
         phone: "",
         email: "",
+        username: "",
         password: "",
         // Clinician fields
         userId: 0,
@@ -218,6 +221,7 @@ const CliniciansPage: React.FC = () => {
           full_name: formData.full_name,
           phone: formData.phone,
           email: formData.email || undefined,
+          username: formData.username || undefined,
           password: formData.password,
           role_ids: [2], // Clinician role ID
           centre_ids: [formData.primaryCentreId], // Required for user creation
@@ -241,7 +245,22 @@ const CliniciansPage: React.FC = () => {
       handleCloseModal();
       fetchData();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Operation failed");
+      const errorMessage = error.response?.data?.message || "Operation failed";
+
+      // Show more specific error messages
+      if (errorMessage.includes("phone number")) {
+        toast.error(
+          "This phone number is already registered. Please use a different phone number.",
+        );
+      } else if (errorMessage.includes("username")) {
+        toast.error(
+          "This username is already taken. Please choose a different username.",
+        );
+      } else if (errorMessage.includes("already registered as a clinician")) {
+        toast.error("This user is already registered as a clinician.");
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -472,6 +491,19 @@ const CliniciansPage: React.FC = () => {
                     setFormData({
                       ...formData,
                       email: e.target.value,
+                    })
+                  }
+                />
+
+                <Input
+                  label="Username (Optional)"
+                  type="text"
+                  placeholder="Choose a unique username"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      username: e.target.value,
                     })
                   }
                 />
