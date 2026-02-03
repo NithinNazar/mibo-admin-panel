@@ -1,8 +1,8 @@
 import axios from "axios";
 
-// API base URL - update this when connecting to backend
+// API base URL - defaults to production if not specified
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api";
 
 // Create axios instance
 const api = axios.create({

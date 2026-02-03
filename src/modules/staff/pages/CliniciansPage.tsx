@@ -223,7 +223,7 @@ const CliniciansPage: React.FC = () => {
           email: formData.email || undefined,
           username: formData.username || undefined,
           password: formData.password,
-          role_ids: [2], // Clinician role ID
+          role_ids: [4], // Clinician role ID - IMPORTANT: Check your database for actual role ID
           centre_ids: [formData.primaryCentreId], // Required for user creation
           designation: formData.designation || formData.specialization,
           primary_centre_id: formData.primaryCentreId,
