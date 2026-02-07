@@ -112,7 +112,7 @@ export interface Clinician {
   id: string;
   userId: string;
   name: string;
-  specialization: string;
+  specialization: string | string[]; // Support both for backward compatibility
   registrationNumber: string;
   yearsOfExperience: number;
   primaryCentreId: string;
@@ -123,7 +123,7 @@ export interface Clinician {
   defaultDurationMinutes: number;
   profilePictureUrl?: string;
   designation?: string;
-  qualification?: string;
+  qualification?: string | string[]; // Support both for backward compatibility
   expertise?: string[];
   languages?: string[];
   isActive: boolean;

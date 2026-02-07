@@ -4,7 +4,7 @@ import type { Clinician, AvailabilityRule } from "../types";
 export interface CreateClinicianRequest {
   userId: number;
   primaryCentreId: number;
-  specialization: string;
+  specialization: string[];
   registrationNumber: string;
   yearsOfExperience: number;
   consultationFee: number;
@@ -12,11 +12,14 @@ export interface CreateClinicianRequest {
   consultationModes: string[];
   defaultDurationMinutes?: number;
   profilePictureUrl?: string;
+  qualification?: string[];
+  expertise?: string[];
+  languages?: string[];
 }
 
 export interface UpdateClinicianRequest {
   primaryCentreId?: number;
-  specialization?: string;
+  specialization?: string[];
   registrationNumber?: string;
   yearsOfExperience?: number;
   consultationFee?: number;
@@ -24,7 +27,7 @@ export interface UpdateClinicianRequest {
   consultationModes?: string[];
   defaultDurationMinutes?: number;
   profilePictureUrl?: string;
-  qualification?: string;
+  qualification?: string[];
   expertise?: string[];
   languages?: string[];
 }

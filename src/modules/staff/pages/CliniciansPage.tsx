@@ -7,6 +7,10 @@ import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import Badge from "../../../components/ui/Badge";
 import MultiSelect from "../../../components/ui/MultiSelect";
+import ProfilePictureUpload from "../../../components/ui/ProfilePictureUpload";
+import AvailabilityScheduleBuilder, {
+  type AvailabilitySlot,
+} from "../../../components/ui/AvailabilityScheduleBuilder";
 import { Plus, Edit, DollarSign, Award } from "lucide-react";
 import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
@@ -28,6 +32,34 @@ const INDIAN_LANGUAGES = [
   "Odia",
   "Urdu",
   "Assamese",
+];
+
+// Common Specializations (extracted from static data)
+const SPECIALIZATIONS = [
+  "Clinical Psychologist",
+  "Psychiatrist",
+  "Counselling Psychologist",
+  "Clinical Hypnotherapist",
+  "Consultant Psychiatrist",
+  "Consultant Child & Adolescent Psychiatrist",
+  "Therapist",
+  "Counselor",
+  "Academic & Psychotherapist",
+];
+
+// Common Qualifications
+const QUALIFICATIONS = [
+  "MBBS",
+  "MD",
+  "DPM",
+  "DNB",
+  "M.Phil",
+  "M.Sc",
+  "Ph.D.",
+  "MRCPsych",
+  "PDF",
+  "DM",
+  "PGDFM",
 ];
 
 // Common Expertise Areas
@@ -64,6 +96,22 @@ const CliniciansPage: React.FC = () => {
   const [editingClinician, setEditingClinician] = useState<Clinician | null>(
     null,
   );
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [detailsFormData, setDetailsFormData] = useState({
+    primaryCentreId: 0,
+    specialization: [] as string[],
+    registrationNumber: "",
+    yearsOfExperience: 0,
+    consultationFee: 0,
+    bio: "",
+    consultationModes: [] as string[],
+    defaultDurationMinutes: 30,
+    profilePictureUrl: "",
+    qualification: [] as string[],
+    expertise: [] as string[],
+    languages: [] as string[],
+    availabilitySlots: [] as AvailabilitySlot[],
+  });
   const [formData, setFormData] = useState({
     // User fields
     full_name: "",
@@ -74,7 +122,7 @@ const CliniciansPage: React.FC = () => {
     // Clinician fields
     userId: 0,
     primaryCentreId: 0,
-    specialization: "",
+    specialization: [] as string[], // Changed to array
     registrationNumber: "",
     yearsOfExperience: 0,
     consultationFee: 0,
@@ -84,9 +132,10 @@ const CliniciansPage: React.FC = () => {
     profilePictureUrl: "",
     designation: "",
     // New fields
-    qualification: "",
+    qualification: [] as string[], // Changed to array
     expertise: [] as string[],
     languages: [] as string[],
+    availabilitySlots: [] as AvailabilitySlot[],
   });
 
   useEffect(() => {
@@ -120,7 +169,11 @@ const CliniciansPage: React.FC = () => {
         password: "",
         userId: parseInt(clinician.userId),
         primaryCentreId: parseInt(clinician.primaryCentreId),
-        specialization: clinician.specialization,
+        specialization: Array.isArray(clinician.specialization)
+          ? clinician.specialization
+          : clinician.specialization
+            ? [clinician.specialization as any]
+            : [],
         registrationNumber: clinician.registrationNumber,
         yearsOfExperience: clinician.yearsOfExperience,
         consultationFee: clinician.consultationFee,
@@ -129,9 +182,14 @@ const CliniciansPage: React.FC = () => {
         defaultDurationMinutes: clinician.defaultDurationMinutes,
         profilePictureUrl: clinician.profilePictureUrl || "",
         designation: clinician.designation || "",
-        qualification: clinician.qualification || "",
+        qualification: Array.isArray(clinician.qualification)
+          ? clinician.qualification
+          : clinician.qualification
+            ? [clinician.qualification as any]
+            : [],
         expertise: clinician.expertise || [],
         languages: clinician.languages || [],
+        availabilitySlots: [],
       });
     } else {
       setEditingClinician(null);
@@ -145,7 +203,7 @@ const CliniciansPage: React.FC = () => {
         // Clinician fields
         userId: 0,
         primaryCentreId: centres[0]?.id ? parseInt(centres[0].id) : 0,
-        specialization: "",
+        specialization: [],
         registrationNumber: "",
         yearsOfExperience: 0,
         consultationFee: 0,
@@ -154,9 +212,10 @@ const CliniciansPage: React.FC = () => {
         defaultDurationMinutes: 30,
         profilePictureUrl: "",
         designation: "",
-        qualification: "",
+        qualification: [],
         expertise: [],
         languages: [],
+        availabilitySlots: [],
       });
     }
     setIsModalOpen(true);
@@ -175,7 +234,7 @@ const CliniciansPage: React.FC = () => {
       // Update validation
       if (
         !formData.specialization ||
-        !formData.registrationNumber ||
+        formData.specialization.length === 0 ||
         !formData.primaryCentreId ||
         formData.consultationFee <= 0
       ) {
@@ -189,7 +248,7 @@ const CliniciansPage: React.FC = () => {
         !formData.phone ||
         !formData.password ||
         !formData.specialization ||
-        !formData.registrationNumber ||
+        formData.specialization.length === 0 ||
         !formData.primaryCentreId ||
         formData.consultationFee <= 0
       ) {
@@ -228,7 +287,7 @@ const CliniciansPage: React.FC = () => {
           designation: formData.designation || formData.specialization,
           primary_centre_id: formData.primaryCentreId,
           specialization: formData.specialization,
-          registration_number: formData.registrationNumber,
+          registration_number: formData.registrationNumber || undefined,
           years_of_experience: formData.yearsOfExperience,
           consultation_fee: formData.consultationFee,
           bio: formData.bio,
@@ -282,14 +341,81 @@ const CliniciansPage: React.FC = () => {
     try {
       const details = await clinicianService.getClinicianById(clinician.id);
       setSelectedClinician(details);
+      setIsEditingDetails(false);
+
+      // Initialize editable form data
+      setDetailsFormData({
+        primaryCentreId: parseInt(details.primaryCentreId),
+        specialization: Array.isArray(details.specialization)
+          ? details.specialization
+          : details.specialization
+            ? [details.specialization as any]
+            : [],
+        registrationNumber: details.registrationNumber || "",
+        yearsOfExperience: details.yearsOfExperience || 0,
+        consultationFee: details.consultationFee || 0,
+        bio: details.bio || "",
+        consultationModes: details.consultationModes || [],
+        defaultDurationMinutes: details.defaultDurationMinutes || 30,
+        profilePictureUrl: details.profilePictureUrl || "",
+        qualification: Array.isArray(details.qualification)
+          ? details.qualification
+          : details.qualification
+            ? [details.qualification as any]
+            : [],
+        expertise: details.expertise || [],
+        languages: details.languages || [],
+        availabilitySlots: [],
+      });
+
       setShowDetailsModal(true);
     } catch (error: any) {
       toast.error("Failed to fetch clinician details");
     }
   };
 
+  const handleSaveDetails = async () => {
+    if (!selectedClinician) return;
+
+    try {
+      await clinicianService.updateClinician(selectedClinician.id, {
+        primaryCentreId: detailsFormData.primaryCentreId,
+        specialization: detailsFormData.specialization,
+        registrationNumber: detailsFormData.registrationNumber,
+        yearsOfExperience: detailsFormData.yearsOfExperience,
+        consultationFee: detailsFormData.consultationFee,
+        bio: detailsFormData.bio,
+        consultationModes: detailsFormData.consultationModes,
+        defaultDurationMinutes: detailsFormData.defaultDurationMinutes,
+        profilePictureUrl: detailsFormData.profilePictureUrl,
+        qualification: detailsFormData.qualification,
+        expertise: detailsFormData.expertise,
+        languages: detailsFormData.languages,
+      });
+
+      toast.success("Clinician details updated successfully");
+      setShowDetailsModal(false);
+      setSelectedClinician(null);
+      setIsEditingDetails(false);
+      fetchData();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to update clinician",
+      );
+    }
+  };
+
   const toggleConsultationMode = (mode: string) => {
     setFormData((prev) => ({
+      ...prev,
+      consultationModes: prev.consultationModes.includes(mode)
+        ? prev.consultationModes.filter((m) => m !== mode)
+        : [...prev.consultationModes, mode],
+    }));
+  };
+
+  const toggleDetailsConsultationMode = (mode: string) => {
+    setDetailsFormData((prev) => ({
       ...prev,
       consultationModes: prev.consultationModes.includes(mode)
         ? prev.consultationModes.filter((m) => m !== mode)
@@ -564,27 +690,31 @@ const CliniciansPage: React.FC = () => {
               disabled={centres.length === 0}
             />
 
-            <Input
+            <MultiSelect
               label="Specialization"
-              type="text"
-              placeholder="e.g., Psychiatrist, Clinical Psychologist"
-              value={formData.specialization}
-              onChange={(e) =>
-                setFormData({ ...formData, specialization: e.target.value })
+              options={SPECIALIZATIONS}
+              selectedValues={formData.specialization}
+              onChange={(specialization) =>
+                setFormData({ ...formData, specialization })
               }
+              placeholder="Add specialization"
               required
             />
 
-            <Input
-              label="Registration Number"
-              type="text"
-              placeholder="Medical registration number"
-              value={formData.registrationNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, registrationNumber: e.target.value })
-              }
-              required
-            />
+            {editingClinician && (
+              <Input
+                label="Registration Number (Legacy)"
+                type="text"
+                placeholder="Medical registration number"
+                value={formData.registrationNumber}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    registrationNumber: e.target.value,
+                  })
+                }
+              />
+            )}
 
             <Input
               label="Years of Experience"
@@ -668,24 +798,23 @@ const CliniciansPage: React.FC = () => {
               />
             </div>
 
-            <Input
-              label="Profile Picture URL (Optional)"
-              type="text"
-              placeholder="https://example.com/photo.jpg"
+            <ProfilePictureUpload
+              label="Profile Picture"
               value={formData.profilePictureUrl}
-              onChange={(e) =>
-                setFormData({ ...formData, profilePictureUrl: e.target.value })
+              onChange={(url) =>
+                setFormData({ ...formData, profilePictureUrl: url })
               }
             />
 
-            <Input
+            <MultiSelect
               label="Qualification"
-              type="text"
-              placeholder="e.g., MBBS, MD (Psychiatry), M.Phil Clinical Psychology"
-              value={formData.qualification}
-              onChange={(e) =>
-                setFormData({ ...formData, qualification: e.target.value })
+              options={QUALIFICATIONS}
+              selectedValues={formData.qualification}
+              onChange={(qualification) =>
+                setFormData({ ...formData, qualification })
               }
+              placeholder="Add qualification"
+              required
             />
 
             <MultiSelect
@@ -703,6 +832,14 @@ const CliniciansPage: React.FC = () => {
               onChange={(languages) => setFormData({ ...formData, languages })}
               placeholder="Add language"
               required
+            />
+
+            <AvailabilityScheduleBuilder
+              label="Availability Schedule"
+              slots={formData.availabilitySlots}
+              onChange={(availabilitySlots) =>
+                setFormData({ ...formData, availabilitySlots })
+              }
             />
           </div>
 
@@ -728,148 +865,401 @@ const CliniciansPage: React.FC = () => {
         onClose={() => {
           setShowDetailsModal(false);
           setSelectedClinician(null);
+          setIsEditingDetails(false);
         }}
-        title="Clinician Details"
+        title={
+          isEditingDetails ? "Edit Clinician Details" : "Clinician Details"
+        }
       >
         {selectedClinician && (
           <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Full Name
-              </label>
-              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                {selectedClinician.name}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Specialization
-              </label>
-              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                {selectedClinician.specialization}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Registration Number
-              </label>
-              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                {selectedClinician.registrationNumber}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Years of Experience
-              </label>
-              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                {selectedClinician.yearsOfExperience} years
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Consultation Fee
-              </label>
-              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                ₹{selectedClinician.consultationFee}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Primary Centre
-              </label>
-              <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                {selectedClinician.primaryCentreName}
-              </div>
-            </div>
-
-            {selectedClinician.qualification && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Qualification
-                </label>
-                <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                  {selectedClinician.qualification}
-                </div>
-              </div>
-            )}
-
-            {selectedClinician.expertise &&
-              selectedClinician.expertise.length > 0 && (
+            {!isEditingDetails ? (
+              // View Mode
+              <>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Expertise
+                    Full Name
                   </label>
                   <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                    {selectedClinician.expertise.join(", ")}
+                    {selectedClinician.name}
                   </div>
                 </div>
-              )}
 
-            {selectedClinician.languages &&
-              selectedClinician.languages.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Languages
+                    Specialization
                   </label>
                   <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                    {selectedClinician.languages.join(", ")}
+                    {Array.isArray(selectedClinician.specialization)
+                      ? selectedClinician.specialization.join(", ")
+                      : selectedClinician.specialization}
                   </div>
                 </div>
-              )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Consultation Modes
-              </label>
-              <div className="flex gap-2">
-                {selectedClinician.consultationModes?.map((mode) => (
-                  <span
-                    key={mode}
-                    className="px-3 py-1 rounded-full text-xs font-medium bg-miboTeal/20 text-miboTeal"
+                {selectedClinician.registrationNumber && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Registration Number
+                    </label>
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                      {selectedClinician.registrationNumber}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Years of Experience
+                  </label>
+                  <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                    {selectedClinician.yearsOfExperience} years
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Consultation Fee
+                  </label>
+                  <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                    ₹{selectedClinician.consultationFee}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Primary Centre
+                  </label>
+                  <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                    {selectedClinician.primaryCentreName}
+                  </div>
+                </div>
+
+                {selectedClinician.qualification && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Qualification
+                    </label>
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                      {Array.isArray(selectedClinician.qualification)
+                        ? selectedClinician.qualification.join(", ")
+                        : selectedClinician.qualification}
+                    </div>
+                  </div>
+                )}
+
+                {selectedClinician.expertise &&
+                  selectedClinician.expertise.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Expertise
+                      </label>
+                      <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                        {selectedClinician.expertise.join(", ")}
+                      </div>
+                    </div>
+                  )}
+
+                {selectedClinician.languages &&
+                  selectedClinician.languages.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Languages
+                      </label>
+                      <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                        {selectedClinician.languages.join(", ")}
+                      </div>
+                    </div>
+                  )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Consultation Modes
+                  </label>
+                  <div className="flex gap-2">
+                    {selectedClinician.consultationModes?.map((mode) => (
+                      <span
+                        key={mode}
+                        className="px-3 py-1 rounded-full text-xs font-medium bg-miboTeal/20 text-miboTeal"
+                      >
+                        {mode === "IN_PERSON" ? "In-Person" : "Online"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedClinician.bio && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Bio
+                    </label>
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                      {selectedClinician.bio}
+                    </div>
+                  </div>
+                )}
+
+                {selectedClinician.profilePictureUrl && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Profile Picture
+                    </label>
+                    <img
+                      src={selectedClinician.profilePictureUrl}
+                      alt="Profile"
+                      className="w-24 h-24 rounded-full object-cover"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Status
+                  </label>
+                  <Badge
+                    variant={selectedClinician.isActive ? "success" : "danger"}
                   >
-                    {mode === "IN_PERSON" ? "In-Person" : "Online"}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {selectedClinician.bio && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Bio
-                </label>
-                <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                  {selectedClinician.bio}
+                    {selectedClinician.isActive ? "Active" : "Inactive"}
+                  </Badge>
                 </div>
-              </div>
-            )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Status
-              </label>
-              <Badge
-                variant={selectedClinician.isActive ? "success" : "danger"}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      setSelectedClinician(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => setIsEditingDetails(true)}
+                    className="flex-1"
+                  >
+                    Edit Details
+                  </Button>
+                </div>
+              </>
+            ) : (
+              // Edit Mode
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSaveDetails();
+                }}
+                className="space-y-4"
               >
-                {selectedClinician.isActive ? "Active" : "Inactive"}
-              </Badge>
-            </div>
+                <Select
+                  label="Primary Centre"
+                  value={detailsFormData.primaryCentreId.toString()}
+                  onChange={(e) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      primaryCentreId: parseInt(e.target.value),
+                    })
+                  }
+                  options={
+                    centres.length > 0
+                      ? centres.map((centre) => ({
+                          value: centre.id,
+                          label: centre.name,
+                        }))
+                      : [
+                          {
+                            value: "0",
+                            label: "No centres available",
+                          },
+                        ]
+                  }
+                  required
+                />
 
-            <Button
-              variant="primary"
-              onClick={() => {
-                setShowDetailsModal(false);
-                setSelectedClinician(null);
-              }}
-              className="w-full mt-4"
-            >
-              Close
-            </Button>
+                <MultiSelect
+                  label="Specialization"
+                  options={SPECIALIZATIONS}
+                  selectedValues={detailsFormData.specialization}
+                  onChange={(specialization) =>
+                    setDetailsFormData({ ...detailsFormData, specialization })
+                  }
+                  placeholder="Add specialization"
+                  required
+                />
+
+                <Input
+                  label="Registration Number (Legacy)"
+                  type="text"
+                  placeholder="Medical registration number"
+                  value={detailsFormData.registrationNumber}
+                  onChange={(e) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      registrationNumber: e.target.value,
+                    })
+                  }
+                />
+
+                <Input
+                  label="Years of Experience"
+                  type="number"
+                  placeholder="Enter years of experience"
+                  value={detailsFormData.yearsOfExperience || ""}
+                  onChange={(e) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      yearsOfExperience: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  required
+                />
+
+                <Input
+                  label="Consultation Fee (₹)"
+                  type="number"
+                  placeholder="Enter consultation fee"
+                  value={detailsFormData.consultationFee || ""}
+                  onChange={(e) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      consultationFee: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  required
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Consultation Modes
+                  </label>
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={detailsFormData.consultationModes.includes(
+                          "IN_PERSON",
+                        )}
+                        onChange={() =>
+                          toggleDetailsConsultationMode("IN_PERSON")
+                        }
+                        className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-miboTeal focus:ring-miboTeal"
+                      />
+                      <span className="text-slate-300">In-Person</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={detailsFormData.consultationModes.includes(
+                          "ONLINE",
+                        )}
+                        onChange={() => toggleDetailsConsultationMode("ONLINE")}
+                        className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-miboTeal focus:ring-miboTeal"
+                      />
+                      <span className="text-slate-300">Online</span>
+                    </label>
+                  </div>
+                </div>
+
+                <Input
+                  label="Default Duration (minutes)"
+                  type="number"
+                  placeholder="Default consultation duration"
+                  value={detailsFormData.defaultDurationMinutes || ""}
+                  onChange={(e) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      defaultDurationMinutes: parseInt(e.target.value) || 30,
+                    })
+                  }
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Bio (Optional)
+                  </label>
+                  <textarea
+                    value={detailsFormData.bio}
+                    onChange={(e) =>
+                      setDetailsFormData({
+                        ...detailsFormData,
+                        bio: e.target.value,
+                      })
+                    }
+                    placeholder="Brief description about the clinician"
+                    rows={3}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-miboTeal"
+                  />
+                </div>
+
+                <ProfilePictureUpload
+                  label="Profile Picture"
+                  value={detailsFormData.profilePictureUrl}
+                  onChange={(url) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      profilePictureUrl: url,
+                    })
+                  }
+                />
+
+                <MultiSelect
+                  label="Qualification"
+                  options={QUALIFICATIONS}
+                  selectedValues={detailsFormData.qualification}
+                  onChange={(qualification) =>
+                    setDetailsFormData({ ...detailsFormData, qualification })
+                  }
+                  placeholder="Add qualification"
+                  required
+                />
+
+                <MultiSelect
+                  label="Expertise"
+                  options={EXPERTISE_AREAS}
+                  selectedValues={detailsFormData.expertise}
+                  onChange={(expertise) =>
+                    setDetailsFormData({ ...detailsFormData, expertise })
+                  }
+                  placeholder="Add area of expertise"
+                />
+
+                <MultiSelect
+                  label="Languages"
+                  options={INDIAN_LANGUAGES}
+                  selectedValues={detailsFormData.languages}
+                  onChange={(languages) =>
+                    setDetailsFormData({ ...detailsFormData, languages })
+                  }
+                  placeholder="Add language"
+                  required
+                />
+
+                <AvailabilityScheduleBuilder
+                  label="Availability Schedule"
+                  slots={detailsFormData.availabilitySlots}
+                  onChange={(availabilitySlots) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      availabilitySlots,
+                    })
+                  }
+                />
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setIsEditingDetails(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1">
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         )}
       </Modal>
