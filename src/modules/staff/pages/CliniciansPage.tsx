@@ -249,10 +249,16 @@ const CliniciansPage: React.FC = () => {
         !formData.password ||
         !formData.specialization ||
         formData.specialization.length === 0 ||
+        !formData.qualification ||
+        formData.qualification.length === 0 ||
+        !formData.languages ||
+        formData.languages.length === 0 ||
         !formData.primaryCentreId ||
         formData.consultationFee <= 0
       ) {
-        toast.error("Please fill in all required fields");
+        toast.error(
+          "Please fill in all required fields (Name, Phone, Password, Specialization, Qualification, Languages, Centre, Fee)",
+        );
         return;
       }
     }
@@ -279,24 +285,51 @@ const CliniciansPage: React.FC = () => {
         const createData = {
           full_name: formData.full_name,
           phone: formData.phone,
-          email: formData.email || undefined,
-          username: formData.username || undefined,
+          email:
+            formData.email && formData.email.trim() !== ""
+              ? formData.email
+              : undefined,
+          username:
+            formData.username && formData.username.trim() !== ""
+              ? formData.username
+              : undefined,
           password: formData.password,
           role_ids: [4], // Clinician role ID - IMPORTANT: Check your database for actual role ID
           centre_ids: [formData.primaryCentreId], // Required for user creation
-          designation: formData.designation || formData.specialization,
+          designation:
+            formData.designation ||
+            (Array.isArray(formData.specialization)
+              ? formData.specialization[0]
+              : "Clinician"),
           primary_centre_id: formData.primaryCentreId,
           specialization: formData.specialization,
-          registration_number: formData.registrationNumber || undefined,
+          registration_number:
+            formData.registrationNumber &&
+            formData.registrationNumber.trim() !== ""
+              ? formData.registrationNumber
+              : undefined,
           years_of_experience: formData.yearsOfExperience,
           consultation_fee: formData.consultationFee,
-          bio: formData.bio,
+          bio:
+            formData.bio && formData.bio.trim() !== ""
+              ? formData.bio
+              : undefined,
           consultation_modes: formData.consultationModes,
-          default_duration_minutes: formData.defaultDurationMinutes,
-          profile_picture_url: formData.profilePictureUrl,
-          qualification: formData.qualification,
-          expertise: formData.expertise,
-          languages: formData.languages,
+          default_consultation_duration_minutes:
+            formData.defaultDurationMinutes,
+          profile_picture_url:
+            formData.profilePictureUrl &&
+            formData.profilePictureUrl.trim() !== ""
+              ? formData.profilePictureUrl
+              : undefined,
+          qualification:
+            formData.qualification.length > 0
+              ? formData.qualification
+              : undefined,
+          expertise:
+            formData.expertise.length > 0 ? formData.expertise : undefined,
+          languages:
+            formData.languages.length > 0 ? formData.languages : undefined,
         };
         await clinicianService.createClinician(createData as any);
         toast.success("Clinician created successfully");
@@ -569,6 +602,7 @@ const CliniciansPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={editingClinician ? "Edit Clinician" : "Add New Clinician"}
+        closeOnBackdropClick={false}
       >
         <form
           onSubmit={handleSubmit}

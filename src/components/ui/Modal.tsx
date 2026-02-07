@@ -8,6 +8,7 @@ export interface ModalProps {
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   showCloseButton?: boolean;
+  closeOnBackdropClick?: boolean; // NEW: Allow disabling backdrop click to close
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -17,6 +18,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   size = "md",
   showCloseButton = true,
+  closeOnBackdropClick = true, // NEW: Default to true for backward compatibility
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -43,7 +45,7 @@ const Modal: React.FC<ModalProps> = ({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={closeOnBackdropClick ? onClose : undefined}
       />
 
       {/* Modal */}

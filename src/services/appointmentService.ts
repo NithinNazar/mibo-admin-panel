@@ -106,7 +106,7 @@ class AppointmentService {
     id: string,
     newDateTime: string,
   ): Promise<Appointment> {
-    const response = await api.patch(`/appointments/${id}/reschedule`, {
+    const response = await api.put(`/appointments/${id}`, {
       scheduledStartAt: newDateTime,
     });
     return response.data.data || response.data;
