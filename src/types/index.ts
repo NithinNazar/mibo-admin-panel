@@ -94,6 +94,7 @@ export interface Patient {
   fullName: string;
   phone: string;
   email?: string;
+  username?: string;
   dateOfBirth?: Date;
   gender?: "male" | "female" | "other";
   bloodGroup?: string;
@@ -103,6 +104,18 @@ export interface Patient {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // Appointment statistics (from patient list endpoint)
+  upcomingAppointmentsCount?: number;
+  pastAppointmentsCount?: number;
+  upcomingAppointments?: Array<{
+    id: number;
+    scheduledStartAt: string;
+    scheduledEndAt: string;
+    appointmentType: string;
+    status: string;
+    clinicianName: string;
+    centreName: string;
+  }>;
 }
 
 // Clinician Types
@@ -111,7 +124,8 @@ export type ConsultationMode = "IN_PERSON" | "ONLINE";
 export interface Clinician {
   id: string;
   userId: string;
-  name: string;
+  fullName?: string; // Backend returns fullName (camelCase)
+  name: string; // Fallback for backward compatibility
   specialization: string | string[]; // Support both for backward compatibility
   registrationNumber: string;
   yearsOfExperience: number;

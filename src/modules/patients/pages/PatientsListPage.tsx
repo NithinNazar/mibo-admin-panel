@@ -17,6 +17,9 @@ import {
   Download,
   FileText,
   Printer,
+  Calendar,
+  Clock,
+  UserCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import patientService from "../../../services/patientService";
@@ -65,7 +68,8 @@ const PatientsListPage: React.FC = () => {
         (patient) =>
           patient.fullName.toLowerCase().includes(query) ||
           patient.phone.includes(query) ||
-          (patient.email && patient.email.toLowerCase().includes(query)),
+          (patient.email && patient.email.toLowerCase().includes(query)) ||
+          (patient.username && patient.username.toLowerCase().includes(query)),
       );
       setFilteredPatients(filtered);
     }
@@ -134,7 +138,7 @@ const PatientsListPage: React.FC = () => {
     try {
       if (editingPatient) {
         await patientService.updatePatient(
-          editingPatient.id,
+          editingPatient.userId,
           formData as UpdatePatientRequest,
         );
         toast.success("Patient updated successfully");
@@ -154,12 +158,15 @@ const PatientsListPage: React.FC = () => {
       Name: patient.fullName,
       Phone: patient.phone,
       Email: patient.email || "N/A",
+      Username: patient.username || "N/A",
       Gender: patient.gender || "Not specified",
       "Blood Group": patient.bloodGroup || "N/A",
       "Date of Birth": patient.dateOfBirth
         ? new Date(patient.dateOfBirth).toLocaleDateString()
         : "N/A",
-      Status: patient.isActive ? "Active" : "Inactive",
+      "Upcoming Appointments": patient.upcomingAppointmentsCount || 0,
+      "Past Appointments": patient.pastAppointmentsCount || 0,
+      "Registered On": new Date(patient.createdAt).toLocaleDateString(),
     }));
     exportToCSV(csvData, "patients");
     toast.success("Exported to CSV successfully");
@@ -171,16 +178,18 @@ const PatientsListPage: React.FC = () => {
       "Phone",
       "Email",
       "Gender",
-      "Blood Group",
-      "Status",
+      "Upcoming",
+      "Past",
+      "Registered",
     ];
     const rows = filteredPatients.map((patient) => [
       patient.fullName,
       patient.phone,
       patient.email || "N/A",
-      patient.gender || "Not specified",
-      patient.bloodGroup || "N/A",
-      patient.isActive ? "Active" : "Inactive",
+      patient.gender || "N/A",
+      String(patient.upcomingAppointmentsCount || 0),
+      String(patient.pastAppointmentsCount || 0),
+      new Date(patient.createdAt).toLocaleDateString(),
     ]);
     exportToPDF(headers, rows, "Patients List");
     toast.success("Exported to PDF successfully");
@@ -192,16 +201,18 @@ const PatientsListPage: React.FC = () => {
       "Phone",
       "Email",
       "Gender",
-      "Blood Group",
-      "Status",
+      "Upcoming Appts",
+      "Past Appts",
+      "Registered",
     ];
     const rows = filteredPatients.map((patient) => [
       patient.fullName,
       patient.phone,
       patient.email || "N/A",
-      patient.gender || "Not specified",
-      patient.bloodGroup || "N/A",
-      patient.isActive ? "Active" : "Inactive",
+      patient.gender || "N/A",
+      String(patient.upcomingAppointmentsCount || 0),
+      String(patient.pastAppointmentsCount || 0),
+      new Date(patient.createdAt).toLocaleDateString(),
     ]);
     printTable("Patients List", headers, rows);
   };
@@ -224,6 +235,9 @@ const PatientsListPage: React.FC = () => {
                 years old
               </div>
             )}
+            {patient.username && (
+              <div className="text-xs text-slate-500">@{patient.username}</div>
+            )}
           </div>
         </div>
       ),
@@ -240,41 +254,79 @@ const PatientsListPage: React.FC = () => {
           {patient.email && (
             <div className="flex items-center gap-2 text-slate-300">
               <Mail size={14} className="text-slate-400" />
-              <span>{patient.email}</span>
+              <span className="text-sm">{patient.email}</span>
             </div>
           )}
         </div>
       ),
     },
     {
-      key: "gender",
-      header: "Gender",
+      key: "info",
+      header: "Info",
       render: (patient: Patient) => (
-        <span className="text-slate-300 capitalize">
-          {patient.gender || "Not specified"}
-        </span>
+        <div className="space-y-1">
+          <div className="text-slate-300 capitalize text-sm">
+            {patient.gender || "Not specified"}
+          </div>
+          {patient.bloodGroup && (
+            <div className="text-slate-400 text-sm">
+              Blood: {patient.bloodGroup}
+            </div>
+          )}
+        </div>
       ),
     },
     {
-      key: "bloodGroup",
-      header: "Blood Group",
+      key: "appointments",
+      header: "Appointments",
       render: (patient: Patient) => (
-        <span className="text-slate-300">{patient.bloodGroup || "N/A"}</span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Calendar size={14} className="text-green-400" />
+            <span className="text-green-400 text-sm font-medium">
+              {patient.upcomingAppointmentsCount || 0} Upcoming
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock size={14} className="text-slate-400" />
+            <span className="text-slate-400 text-sm">
+              {patient.pastAppointmentsCount || 0} Past
+            </span>
+          </div>
+        </div>
       ),
     },
     {
-      key: "status",
-      header: "Status",
+      key: "nextAppointment",
+      header: "Next Appointment",
+      render: (patient: Patient) => {
+        const nextAppt = patient.upcomingAppointments?.[0];
+        if (!nextAppt) {
+          return <span className="text-slate-500 text-sm">No upcoming</span>;
+        }
+        return (
+          <div className="space-y-1">
+            <div className="text-white text-sm font-medium">
+              {new Date(nextAppt.scheduledStartAt).toLocaleDateString()}
+            </div>
+            <div className="text-slate-400 text-xs">
+              {new Date(nextAppt.scheduledStartAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+            <div className="text-slate-500 text-xs">{nextAppt.centreName}</div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "registered",
+      header: "Registered",
       render: (patient: Patient) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${
-            patient.isActive
-              ? "bg-green-500/20 text-green-400"
-              : "bg-red-500/20 text-red-400"
-          }`}
-        >
-          {patient.isActive ? "Active" : "Inactive"}
-        </span>
+        <div className="text-slate-300 text-sm">
+          {new Date(patient.createdAt).toLocaleDateString()}
+        </div>
       ),
     },
     {
@@ -285,7 +337,8 @@ const PatientsListPage: React.FC = () => {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => navigate(`/patients/${patient.id}`)}
+            onClick={() => navigate(`/patients/${patient.userId}`)}
+            title="View Details"
           >
             <Eye size={16} />
           </Button>
@@ -293,6 +346,7 @@ const PatientsListPage: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={() => handleOpenModal(patient)}
+            title="Edit Patient"
           >
             <Edit size={16} />
           </Button>
@@ -305,13 +359,82 @@ const PatientsListPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white">Patients</h1>
-          <p className="text-slate-400 mt-1">Manage patient records</p>
+          <h1 className="text-2xl font-bold text-white">All Patients</h1>
+          <p className="text-slate-400 mt-1">
+            Complete list of all registered patients
+          </p>
         </div>
         <Button variant="primary" onClick={() => handleOpenModal()}>
           <Plus size={20} />
           Add Patient
         </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-miboTeal/20 flex items-center justify-center">
+              <UserCheck size={24} className="text-miboTeal" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">
+                {patients.length}
+              </div>
+              <div className="text-sm text-slate-400">Total Patients</div>
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+              <Calendar size={24} className="text-green-400" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">
+                {patients.reduce(
+                  (sum, p) => sum + (p.upcomingAppointmentsCount || 0),
+                  0,
+                )}
+              </div>
+              <div className="text-sm text-slate-400">
+                Upcoming Appointments
+              </div>
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <Clock size={24} className="text-blue-400" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">
+                {patients.reduce(
+                  (sum, p) => sum + (p.pastAppointmentsCount || 0),
+                  0,
+                )}
+              </div>
+              <div className="text-sm text-slate-400">Past Appointments</div>
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <User size={24} className="text-purple-400" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">
+                {
+                  patients.filter((p) => (p.upcomingAppointmentsCount || 0) > 0)
+                    .length
+                }
+              </div>
+              <div className="text-sm text-slate-400">Active Patients</div>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Search Bar */}
@@ -323,7 +446,7 @@ const PatientsListPage: React.FC = () => {
           />
           <input
             type="text"
-            placeholder="Search by name, phone, or email..."
+            placeholder="Search by name, phone, email, or username..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-miboTeal"
@@ -377,11 +500,16 @@ const PatientsListPage: React.FC = () => {
               : "No patients found. Add your first patient to get started."}
           </div>
         ) : (
-          <Table
-            columns={columns}
-            data={filteredPatients}
-            keyExtractor={(p) => p.id}
-          />
+          <>
+            <div className="mb-4 text-sm text-slate-400">
+              Showing {filteredPatients.length} of {patients.length} patients
+            </div>
+            <Table
+              columns={columns}
+              data={filteredPatients}
+              keyExtractor={(p) => p.userId}
+            />
+          </>
         )}
       </Card>
 

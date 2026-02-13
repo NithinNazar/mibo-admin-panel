@@ -462,7 +462,9 @@ const CliniciansPage: React.FC = () => {
       header: "Clinician",
       render: (clinician: Clinician) => (
         <div>
-          <div className="font-medium text-white">{clinician.name}</div>
+          <div className="font-medium text-white">
+            {clinician.fullName || clinician.name}
+          </div>
           <div className="text-sm text-slate-400">
             {clinician.specialization}
           </div>
