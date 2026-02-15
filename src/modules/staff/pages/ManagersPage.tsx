@@ -5,6 +5,7 @@ import Input from "../../../components/ui/Input";
 import Modal from "../../../components/ui/Modal";
 import Table from "../../../components/ui/Table";
 import Badge from "../../../components/ui/Badge";
+import { LoadingOverlay } from "../../../components/ui/LoadingOverlay";
 import {
   Download,
   FileText,
@@ -36,6 +37,7 @@ interface Manager {
 const ManagersPage: React.FC = () => {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
@@ -79,7 +81,7 @@ const ManagersPage: React.FC = () => {
         return;
       }
 
-      setLoading(true);
+      setIsCreating(true);
       await staffService.createManager(formData);
       toast.success("Manager created successfully!");
       setShowCreateModal(false);
@@ -94,7 +96,7 @@ const ManagersPage: React.FC = () => {
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to create manager");
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
@@ -400,13 +402,14 @@ const ManagersPage: React.FC = () => {
               variant="secondary"
               onClick={() => setShowCreateModal(false)}
               className="flex-1"
+              disabled={isCreating}
             >
               Cancel
             </Button>
             <Button
               variant="primary"
               onClick={handleCreateManager}
-              loading={loading}
+              disabled={isCreating}
               className="flex-1"
             >
               Create Manager
@@ -503,6 +506,13 @@ const ManagersPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isVisible={isCreating}
+        message="Creating manager..."
+        minDisplayTime={3000}
+      />
     </div>
   );
 };

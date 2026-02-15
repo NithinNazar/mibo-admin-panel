@@ -140,6 +140,7 @@ export interface Clinician {
   qualification?: string | string[]; // Support both for backward compatibility
   expertise?: string[];
   languages?: string[];
+  availabilityRules?: AvailabilityRule[]; // Availability slots
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;

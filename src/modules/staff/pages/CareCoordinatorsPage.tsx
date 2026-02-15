@@ -6,6 +6,7 @@ import Select from "../../../components/ui/Select";
 import Modal from "../../../components/ui/Modal";
 import Table from "../../../components/ui/Table";
 import Badge from "../../../components/ui/Badge";
+import { LoadingOverlay } from "../../../components/ui/LoadingOverlay";
 import {
   Download,
   FileText,
@@ -40,6 +41,7 @@ const CareCoordinatorsPage: React.FC = () => {
   const [coordinators, setCoordinators] = useState<CareCoordinator[]>([]);
   const [centres, setCentres] = useState<Centre[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedCoordinator, setSelectedCoordinator] =
@@ -96,7 +98,7 @@ const CareCoordinatorsPage: React.FC = () => {
         return;
       }
 
-      setLoading(true);
+      setIsCreating(true);
       await staffService.createCareCoordinator({
         ...formData,
         centreId: parseInt(formData.centreId),
@@ -117,7 +119,7 @@ const CareCoordinatorsPage: React.FC = () => {
         error.response?.data?.message || "Failed to create care coordinator",
       );
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
@@ -454,7 +456,7 @@ const CareCoordinatorsPage: React.FC = () => {
             <Button
               variant="primary"
               onClick={handleCreateCoordinator}
-              loading={loading}
+              disabled={isCreating}
               className="flex-1"
             >
               Create Care Coordinator
@@ -553,6 +555,13 @@ const CareCoordinatorsPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isVisible={isCreating}
+        message="Creating care coordinator..."
+        minDisplayTime={3000}
+      />
     </div>
   );
 };

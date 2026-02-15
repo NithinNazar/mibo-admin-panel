@@ -8,10 +8,14 @@ import Select from "../../../components/ui/Select";
 import Badge from "../../../components/ui/Badge";
 import MultiSelect from "../../../components/ui/MultiSelect";
 import ProfilePictureUpload from "../../../components/ui/ProfilePictureUpload";
+import { LoadingOverlay } from "../../../components/ui/LoadingOverlay";
+import { CalendarPicker } from "../../../components/ui/CalendarPicker";
+import { TimeSlider } from "../../../components/ui/TimeSlider";
+import { FieldLockInput } from "../../../components/ui/FieldLockInput";
 import AvailabilityScheduleBuilder, {
   type AvailabilitySlot,
 } from "../../../components/ui/AvailabilityScheduleBuilder";
-import { Plus, Edit, DollarSign, Award } from "lucide-react";
+import { Plus, Edit, DollarSign, Award, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
 import centreService from "../../../services/centreService";
@@ -88,6 +92,7 @@ const CliniciansPage: React.FC = () => {
   const [clinicians, setClinicians] = useState<Clinician[]>([]);
   const [centres, setCentres] = useState<Centre[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedClinician, setSelectedClinician] = useState<Clinician | null>(
@@ -97,6 +102,23 @@ const CliniciansPage: React.FC = () => {
     null,
   );
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+
+  // Calendar and time slot state
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string>("09:00");
+  const [sessionLength, setSessionLength] = useState<number>(30);
+  const [timeSlotsByDate, setTimeSlotsByDate] = useState<Map<string, string[]>>(
+    new Map(),
+  );
+
+  // Field locking state
+  const [lockedFields, setLockedFields] = useState<Set<string>>(new Set());
+
+  // Validation errors state
+  const [validationErrors, setValidationErrors] = useState<{
+    [key: string]: string;
+  }>({});
+
   const [detailsFormData, setDetailsFormData] = useState({
     primaryCentreId: 0,
     specialization: [] as string[],
@@ -152,7 +174,7 @@ const CliniciansPage: React.FC = () => {
       setClinicians(cliniciansData);
       setCentres(centresData);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to fetch data");
+      toast.error(error.message || "Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -217,8 +239,296 @@ const CliniciansPage: React.FC = () => {
         languages: [],
         availabilitySlots: [],
       });
+      // Reset calendar state
+      setSelectedDate(null);
+      setSelectedTime("09:00");
+      setSessionLength(30);
+      setTimeSlotsByDate(new Map());
+      setLockedFields(new Set());
     }
     setIsModalOpen(true);
+  };
+
+  // Validation functions
+  const validatePhone = (phone: string): string | null => {
+    if (!phone) return "Phone number is required";
+    const phoneRegex = /^[6-9]\d{9}$/;
+    const cleanPhone = phone.trim().replace(/\D/g, "");
+    if (!phoneRegex.test(cleanPhone)) {
+      return "Invalid phone number. Must be 10 digits starting with 6-9";
+    }
+    return null;
+  };
+
+  const validateEmail = (email: string): string | null => {
+    if (!email || email.trim() === "") return null; // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Invalid email format";
+    }
+    return null;
+  };
+
+  const validateConsultationFee = (fee: number): string | null => {
+    if (fee === undefined || fee === null)
+      return "Consultation fee is required";
+    if (fee <= 0) {
+      return "Consultation fee must be a positive number";
+    }
+    return null;
+  };
+
+  const validateYearsOfExperience = (years: number): string | null => {
+    if (years === undefined || years === null) return null; // Optional
+    if (years < 0) {
+      return "Years of experience cannot be negative";
+    }
+    return null;
+  };
+
+  const validateArrayField = (
+    arr: string[],
+    fieldName: string,
+  ): string | null => {
+    if (!arr || !Array.isArray(arr) || arr.length === 0) {
+      return `${fieldName} must have at least one value`;
+    }
+    return null;
+  };
+
+  // Validate all fields
+  const validateAllFields = (): boolean => {
+    const errors: { [key: string]: string } = {};
+
+    if (!editingClinician) {
+      // Validate phone
+      const phoneError = validatePhone(formData.phone);
+      if (phoneError) errors.phone = phoneError;
+
+      // Validate email
+      const emailError = validateEmail(formData.email);
+      if (emailError) errors.email = emailError;
+
+      // Validate full name
+      if (!formData.full_name || formData.full_name.trim() === "") {
+        errors.full_name = "Full name is required";
+      }
+
+      // Validate password
+      if (!formData.password || formData.password.length < 8) {
+        errors.password = "Password must be at least 8 characters";
+      }
+    }
+
+    // Validate consultation fee
+    const feeError = validateConsultationFee(formData.consultationFee);
+    if (feeError) errors.consultationFee = feeError;
+
+    // Validate years of experience
+    const yearsError = validateYearsOfExperience(formData.yearsOfExperience);
+    if (yearsError) errors.yearsOfExperience = yearsError;
+
+    // Validate specialization
+    const specializationError = validateArrayField(
+      formData.specialization,
+      "Specialization",
+    );
+    if (specializationError) errors.specialization = specializationError;
+
+    // Validate qualification
+    const qualificationError = validateArrayField(
+      formData.qualification,
+      "Qualification",
+    );
+    if (qualificationError) errors.qualification = qualificationError;
+
+    // Validate languages
+    const languagesError = validateArrayField(formData.languages, "Languages");
+    if (languagesError) errors.languages = languagesError;
+
+    // Validate consultation modes
+    if (
+      !formData.consultationModes ||
+      formData.consultationModes.length === 0
+    ) {
+      errors.consultationModes = "At least one consultation mode is required";
+    }
+
+    // Validate primary centre
+    if (!formData.primaryCentreId || formData.primaryCentreId === 0) {
+      errors.primaryCentreId = "Primary centre is required";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Clear error for a specific field
+  const clearFieldError = (fieldName: string) => {
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
+  };
+
+  // Toggle field lock
+  const toggleFieldLock = (fieldName: string) => {
+    const newLockedFields = new Set(lockedFields);
+    if (newLockedFields.has(fieldName)) {
+      newLockedFields.delete(fieldName);
+    } else {
+      newLockedFields.add(fieldName);
+    }
+    setLockedFields(newLockedFields);
+  };
+
+  // Check if all required fields are locked
+  const areAllRequiredFieldsLocked = (): boolean => {
+    if (editingClinician) return true; // Skip for edit mode
+
+    const requiredFields = [
+      "full_name",
+      "phone",
+      "password",
+      "primaryCentreId",
+      "consultationFee",
+      "yearsOfExperience",
+    ];
+
+    return requiredFields.every((field) => lockedFields.has(field));
+  };
+
+  // Handle date selection from calendar
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  // Handle time change from time slider
+  const handleTimeChange = (time: string) => {
+    setSelectedTime(time);
+  };
+
+  // Add time slot for selected date
+  const handleAddTimeSlot = () => {
+    if (!selectedDate) {
+      toast.error("Please select a date first");
+      return;
+    }
+
+    const dateKey = selectedDate.toISOString().split("T")[0];
+    const currentSlots = timeSlotsByDate.get(dateKey) || [];
+
+    // Check if time already exists for this date
+    if (currentSlots.includes(selectedTime)) {
+      toast.error("This time slot already exists for the selected date");
+      return;
+    }
+
+    // Check for overlapping time ranges
+    const [startHours, startMinutes] = selectedTime.split(":").map(Number);
+    const startMinutesTotal = startHours * 60 + startMinutes;
+    const endMinutesTotal = startMinutesTotal + sessionLength;
+
+    for (const existingTime of currentSlots) {
+      const [existingHours, existingMinutes] = existingTime
+        .split(":")
+        .map(Number);
+      const existingStartMinutes = existingHours * 60 + existingMinutes;
+      const existingEndMinutes = existingStartMinutes + sessionLength;
+
+      // Check for overlap
+      // Two time ranges overlap if:
+      // 1. New start time is between existing start and end
+      // 2. New end time is between existing start and end
+      // 3. New range completely contains existing range
+      // 4. Existing range completely contains new range
+      const overlaps =
+        (startMinutesTotal >= existingStartMinutes &&
+          startMinutesTotal < existingEndMinutes) ||
+        (endMinutesTotal > existingStartMinutes &&
+          endMinutesTotal <= existingEndMinutes) ||
+        (startMinutesTotal <= existingStartMinutes &&
+          endMinutesTotal >= existingEndMinutes) ||
+        (existingStartMinutes <= startMinutesTotal &&
+          existingEndMinutes >= endMinutesTotal);
+
+      if (overlaps) {
+        // Format times for display
+        const formatTime = (minutes: number) => {
+          const h = Math.floor(minutes / 60);
+          const m = minutes % 60;
+          const period = h >= 12 ? "PM" : "AM";
+          const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+        };
+
+        toast.error(
+          `Time slot overlaps with existing slot: ${formatTime(existingStartMinutes)} - ${formatTime(existingEndMinutes)}`,
+        );
+        return;
+      }
+    }
+
+    // Add the time slot
+    const updatedSlots = [...currentSlots, selectedTime].sort();
+    const newMap = new Map(timeSlotsByDate);
+    newMap.set(dateKey, updatedSlots);
+    setTimeSlotsByDate(newMap);
+
+    toast.success("Time slot added");
+  };
+
+  // Remove time slot
+  const handleRemoveTimeSlot = (dateKey: string, time: string) => {
+    const currentSlots = timeSlotsByDate.get(dateKey) || [];
+    const updatedSlots = currentSlots.filter((t) => t !== time);
+
+    const newMap = new Map(timeSlotsByDate);
+    if (updatedSlots.length === 0) {
+      newMap.delete(dateKey);
+    } else {
+      newMap.set(dateKey, updatedSlots);
+    }
+    setTimeSlotsByDate(newMap);
+    toast.success("Time slot removed");
+  };
+
+  // Convert calendar-based slots to API format
+  const convertSlotsToAPIFormat = (): AvailabilitySlot[] => {
+    const slots: AvailabilitySlot[] = [];
+
+    timeSlotsByDate.forEach((times, dateKey) => {
+      const date = new Date(dateKey);
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+
+      times.forEach((startTime) => {
+        // Calculate end time
+        const [hours, minutes] = startTime.split(":").map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + sessionLength;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+        slots.push({
+          id: `${dateKey}-${startTime}`,
+          dayOfWeek: dayOfWeek,
+          startTime: startTime,
+          endTime: endTime,
+          consultationMode: formData.consultationModes[0] || "IN_PERSON",
+        });
+      });
+    });
+
+    return slots;
+  };
+
+  // Get marked dates for calendar (dates that have slots)
+  const getMarkedDates = (): Date[] => {
+    return Array.from(timeSlotsByDate.keys()).map(
+      (dateKey) => new Date(dateKey),
+    );
   };
 
   const handleCloseModal = () => {
@@ -229,39 +539,13 @@ const CliniciansPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
-    if (editingClinician) {
-      // Update validation
-      if (
-        !formData.specialization ||
-        formData.specialization.length === 0 ||
-        !formData.primaryCentreId ||
-        formData.consultationFee <= 0
-      ) {
-        toast.error("Please fill in all required fields");
-        return;
-      }
-    } else {
-      // Create validation - requires user fields
-      if (
-        !formData.full_name ||
-        !formData.phone ||
-        !formData.password ||
-        !formData.specialization ||
-        formData.specialization.length === 0 ||
-        !formData.qualification ||
-        formData.qualification.length === 0 ||
-        !formData.languages ||
-        formData.languages.length === 0 ||
-        !formData.primaryCentreId ||
-        formData.consultationFee <= 0
-      ) {
-        toast.error(
-          "Please fill in all required fields (Name, Phone, Password, Specialization, Qualification, Languages, Centre, Fee)",
-        );
-        return;
-      }
+    // Validate all fields
+    if (!validateAllFields()) {
+      toast.error("Please fix all validation errors before submitting");
+      return;
     }
+
+    setIsCreating(true);
 
     try {
       if (editingClinician) {
@@ -281,6 +565,9 @@ const CliniciansPage: React.FC = () => {
         });
         toast.success("Clinician updated successfully");
       } else {
+        // Convert calendar slots to API format
+        const availabilitySlots = convertSlotsToAPIFormat();
+
         // Create new clinician with user data
         const createData = {
           full_name: formData.full_name,
@@ -330,6 +617,8 @@ const CliniciansPage: React.FC = () => {
             formData.expertise.length > 0 ? formData.expertise : undefined,
           languages:
             formData.languages.length > 0 ? formData.languages : undefined,
+          availability_slots:
+            availabilitySlots.length > 0 ? availabilitySlots : undefined,
         };
         await clinicianService.createClinician(createData as any);
         toast.success("Clinician created successfully");
@@ -337,22 +626,10 @@ const CliniciansPage: React.FC = () => {
       handleCloseModal();
       fetchData();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Operation failed";
-
-      // Show more specific error messages
-      if (errorMessage.includes("phone number")) {
-        toast.error(
-          "This phone number is already registered. Please use a different phone number.",
-        );
-      } else if (errorMessage.includes("username")) {
-        toast.error(
-          "This username is already taken. Please choose a different username.",
-        );
-      } else if (errorMessage.includes("already registered as a clinician")) {
-        toast.error("This user is already registered as a clinician.");
-      } else {
-        toast.error(errorMessage);
-      }
+      // The error message is already formatted by the service
+      toast.error(error.message || "Operation failed");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -364,9 +641,7 @@ const CliniciansPage: React.FC = () => {
       );
       fetchData();
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "Failed to update clinician status",
-      );
+      toast.error(error.message || "Failed to update clinician status");
     }
   };
 
@@ -403,7 +678,7 @@ const CliniciansPage: React.FC = () => {
 
       setShowDetailsModal(true);
     } catch (error: any) {
-      toast.error("Failed to fetch clinician details");
+      toast.error(error.message || "Failed to fetch clinician details");
     }
   };
 
@@ -432,9 +707,7 @@ const CliniciansPage: React.FC = () => {
       setIsEditingDetails(false);
       fetchData();
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "Failed to update clinician",
-      );
+      toast.error(error.message || "Failed to update clinician");
     }
   };
 
@@ -616,32 +889,40 @@ const CliniciansPage: React.FC = () => {
                 <h3 className="text-sm font-semibold text-miboTeal mb-2">
                   User Information
                 </h3>
-                <Input
+                <FieldLockInput
                   label="Full Name"
                   type="text"
                   placeholder="Enter clinician's full name"
                   value={formData.full_name}
-                  onChange={(e) =>
+                  onChange={(value) => {
                     setFormData({
                       ...formData,
-                      full_name: e.target.value,
-                    })
-                  }
+                      full_name: value as string,
+                    });
+                    clearFieldError("full_name");
+                  }}
                   required
+                  locked={lockedFields.has("full_name")}
+                  onLockToggle={() => toggleFieldLock("full_name")}
+                  error={validationErrors.full_name}
                 />
 
-                <Input
+                <FieldLockInput
                   label="Phone Number"
                   type="tel"
                   placeholder="10-digit phone number"
                   value={formData.phone}
-                  onChange={(e) =>
+                  onChange={(value) => {
                     setFormData({
                       ...formData,
-                      phone: e.target.value,
-                    })
-                  }
+                      phone: value as string,
+                    });
+                    clearFieldError("phone");
+                  }}
                   required
+                  locked={lockedFields.has("phone")}
+                  onLockToggle={() => toggleFieldLock("phone")}
+                  error={validationErrors.phone}
                 />
 
                 <Input
@@ -649,13 +930,19 @@ const CliniciansPage: React.FC = () => {
                   type="email"
                   placeholder="email@example.com"
                   value={formData.email}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData({
                       ...formData,
                       email: e.target.value,
-                    })
-                  }
+                    });
+                    clearFieldError("email");
+                  }}
                 />
+                {validationErrors.email && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {validationErrors.email}
+                  </p>
+                )}
 
                 <Input
                   label="Username (Optional)"
@@ -670,18 +957,22 @@ const CliniciansPage: React.FC = () => {
                   }
                 />
 
-                <Input
+                <FieldLockInput
                   label="Password"
-                  type="password"
+                  type="text"
                   placeholder="Minimum 8 characters"
                   value={formData.password}
-                  onChange={(e) =>
+                  onChange={(value) => {
                     setFormData({
                       ...formData,
-                      password: e.target.value,
-                    })
-                  }
+                      password: value as string,
+                    });
+                    clearFieldError("password");
+                  }}
                   required
+                  locked={lockedFields.has("password")}
+                  onLockToggle={() => toggleFieldLock("password")}
+                  error={validationErrors.password}
                 />
               </div>
             </>
@@ -703,12 +994,13 @@ const CliniciansPage: React.FC = () => {
             <Select
               label="Primary Centre"
               value={formData.primaryCentreId.toString()}
-              onChange={(e) =>
+              onChange={(e) => {
                 setFormData({
                   ...formData,
                   primaryCentreId: parseInt(e.target.value),
-                })
-              }
+                });
+                clearFieldError("primaryCentreId");
+              }}
               options={
                 centres.length > 0
                   ? centres.map((centre) => ({
@@ -725,17 +1017,28 @@ const CliniciansPage: React.FC = () => {
               required
               disabled={centres.length === 0}
             />
+            {validationErrors.primaryCentreId && (
+              <p className="text-xs text-red-500 -mt-2">
+                {validationErrors.primaryCentreId}
+              </p>
+            )}
 
             <MultiSelect
               label="Specialization"
               options={SPECIALIZATIONS}
               selectedValues={formData.specialization}
-              onChange={(specialization) =>
-                setFormData({ ...formData, specialization })
-              }
+              onChange={(specialization) => {
+                setFormData({ ...formData, specialization });
+                clearFieldError("specialization");
+              }}
               placeholder="Add specialization"
               required
             />
+            {validationErrors.specialization && (
+              <p className="text-xs text-red-500 -mt-2">
+                {validationErrors.specialization}
+              </p>
+            )}
 
             {editingClinician && (
               <Input
@@ -752,32 +1055,46 @@ const CliniciansPage: React.FC = () => {
               />
             )}
 
-            <Input
+            <FieldLockInput
               label="Years of Experience"
               type="number"
               placeholder="Enter years of experience"
               value={formData.yearsOfExperience || ""}
-              onChange={(e) =>
+              onChange={(value) => {
                 setFormData({
                   ...formData,
-                  yearsOfExperience: parseInt(e.target.value) || 0,
-                })
-              }
+                  yearsOfExperience:
+                    typeof value === "number"
+                      ? value
+                      : parseInt(value as string) || 0,
+                });
+                clearFieldError("yearsOfExperience");
+              }}
               required
+              locked={lockedFields.has("yearsOfExperience")}
+              onLockToggle={() => toggleFieldLock("yearsOfExperience")}
+              error={validationErrors.yearsOfExperience}
             />
 
-            <Input
+            <FieldLockInput
               label="Consultation Fee (₹)"
               type="number"
               placeholder="Enter consultation fee"
               value={formData.consultationFee || ""}
-              onChange={(e) =>
+              onChange={(value) => {
                 setFormData({
                   ...formData,
-                  consultationFee: parseFloat(e.target.value) || 0,
-                })
-              }
+                  consultationFee:
+                    typeof value === "number"
+                      ? value
+                      : parseFloat(value as string) || 0,
+                });
+                clearFieldError("consultationFee");
+              }}
               required
+              locked={lockedFields.has("consultationFee")}
+              onLockToggle={() => toggleFieldLock("consultationFee")}
+              error={validationErrors.consultationFee}
             />
 
             <div>
@@ -789,7 +1106,10 @@ const CliniciansPage: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={formData.consultationModes.includes("IN_PERSON")}
-                    onChange={() => toggleConsultationMode("IN_PERSON")}
+                    onChange={() => {
+                      toggleConsultationMode("IN_PERSON");
+                      clearFieldError("consultationModes");
+                    }}
                     className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-miboTeal focus:ring-miboTeal"
                   />
                   <span className="text-slate-300">In-Person</span>
@@ -798,12 +1118,20 @@ const CliniciansPage: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={formData.consultationModes.includes("ONLINE")}
-                    onChange={() => toggleConsultationMode("ONLINE")}
+                    onChange={() => {
+                      toggleConsultationMode("ONLINE");
+                      clearFieldError("consultationModes");
+                    }}
                     className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-miboTeal focus:ring-miboTeal"
                   />
                   <span className="text-slate-300">Online</span>
                 </label>
               </div>
+              {validationErrors.consultationModes && (
+                <p className="text-xs text-red-500 mt-1">
+                  {validationErrors.consultationModes}
+                </p>
+              )}
             </div>
 
             <Input
@@ -846,12 +1174,18 @@ const CliniciansPage: React.FC = () => {
               label="Qualification"
               options={QUALIFICATIONS}
               selectedValues={formData.qualification}
-              onChange={(qualification) =>
-                setFormData({ ...formData, qualification })
-              }
+              onChange={(qualification) => {
+                setFormData({ ...formData, qualification });
+                clearFieldError("qualification");
+              }}
               placeholder="Add qualification"
               required
             />
+            {validationErrors.qualification && (
+              <p className="text-xs text-red-500 -mt-2">
+                {validationErrors.qualification}
+              </p>
+            )}
 
             <MultiSelect
               label="Expertise"
@@ -865,18 +1199,162 @@ const CliniciansPage: React.FC = () => {
               label="Languages"
               options={INDIAN_LANGUAGES}
               selectedValues={formData.languages}
-              onChange={(languages) => setFormData({ ...formData, languages })}
+              onChange={(languages) => {
+                setFormData({ ...formData, languages });
+                clearFieldError("languages");
+              }}
               placeholder="Add language"
               required
             />
+            {validationErrors.languages && (
+              <p className="text-xs text-red-500 -mt-2">
+                {validationErrors.languages}
+              </p>
+            )}
 
-            <AvailabilityScheduleBuilder
-              label="Availability Schedule"
-              slots={formData.availabilitySlots}
-              onChange={(availabilitySlots) =>
-                setFormData({ ...formData, availabilitySlots })
-              }
-            />
+            {/* Availability Schedule - Calendar + Time Slider */}
+            <div className="space-y-4 bg-slate-700/30 p-4 rounded-lg">
+              <h3 className="text-sm font-semibold text-miboTeal">
+                Availability Schedule
+              </h3>
+
+              {/* Session Length */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Session Length (minutes)
+                </label>
+                <Input
+                  type="number"
+                  value={sessionLength}
+                  onChange={(e) =>
+                    setSessionLength(parseInt(e.target.value) || 30)
+                  }
+                  placeholder="30"
+                />
+              </div>
+
+              {/* Calendar Picker */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Select Date
+                </label>
+                <CalendarPicker
+                  selectedDate={selectedDate}
+                  onDateSelect={handleDateSelect}
+                  markedDates={getMarkedDates()}
+                  minDate={new Date()}
+                />
+              </div>
+
+              {/* Time Slider */}
+              {selectedDate && (
+                <div>
+                  <TimeSlider
+                    value={selectedTime}
+                    onChange={handleTimeChange}
+                    sessionLength={sessionLength}
+                    label="Select Start Time"
+                  />
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleAddTimeSlot}
+                    className="mt-3 w-full"
+                  >
+                    <Plus size={16} />
+                    Add Time Slot
+                  </Button>
+                </div>
+              )}
+
+              {/* Display Added Slots */}
+              {timeSlotsByDate.size > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h4 className="text-sm font-medium text-slate-300">
+                    Added Time Slots (
+                    {Array.from(timeSlotsByDate.values()).reduce(
+                      (sum, slots) => sum + slots.length,
+                      0,
+                    )}{" "}
+                    total)
+                  </h4>
+                  {Array.from(timeSlotsByDate.entries())
+                    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                    .map(([dateKey, times]) => {
+                      const date = new Date(dateKey);
+                      const dayNames = [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                      ];
+                      const dayName = dayNames[date.getDay()];
+                      const formattedDate = date.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      });
+
+                      return (
+                        <div
+                          key={dateKey}
+                          className="bg-slate-700/50 p-3 rounded-lg"
+                        >
+                          <div className="text-sm font-medium text-miboTeal mb-2">
+                            {dayName}, {formattedDate}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {times.map((time) => {
+                              // Calculate end time
+                              const [hours, minutes] = time
+                                .split(":")
+                                .map(Number);
+                              const startMinutes = hours * 60 + minutes;
+                              const endMinutes = startMinutes + sessionLength;
+                              const endHours = Math.floor(endMinutes / 60);
+                              const endMins = endMinutes % 60;
+                              const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+                              // Format for display (12-hour)
+                              const formatTime12 = (time24: string) => {
+                                const [h, m] = time24.split(":").map(Number);
+                                const period = h >= 12 ? "PM" : "AM";
+                                const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                                return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+                              };
+
+                              return (
+                                <div
+                                  key={time}
+                                  className="flex items-center gap-2 bg-slate-600 px-3 py-1 rounded-md text-sm text-slate-200"
+                                >
+                                  <span>
+                                    {formatTime12(time)} -{" "}
+                                    {formatTime12(endTime)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveTimeSlot(dateKey, time)
+                                    }
+                                    className="text-red-400 hover:text-red-300"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -885,10 +1363,16 @@ const CliniciansPage: React.FC = () => {
               variant="secondary"
               onClick={handleCloseModal}
               className="flex-1"
+              disabled={isCreating}
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary" className="flex-1">
+            <Button
+              type="submit"
+              variant="primary"
+              className="flex-1"
+              disabled={isCreating || !areAllRequiredFieldsLocked()}
+            >
               {editingClinician ? "Update" : "Create"} Clinician
             </Button>
           </div>
@@ -1033,6 +1517,59 @@ const CliniciansPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {selectedClinician.availabilityRules &&
+                  selectedClinician.availabilityRules.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Availability Schedule
+                      </label>
+                      <div className="space-y-2">
+                        {selectedClinician.availabilityRules.map(
+                          (rule, index) => {
+                            const dayNames = [
+                              "Sunday",
+                              "Monday",
+                              "Tuesday",
+                              "Wednesday",
+                              "Thursday",
+                              "Friday",
+                              "Saturday",
+                            ];
+                            const dayName = dayNames[rule.dayOfWeek];
+
+                            // Format time for display (12-hour)
+                            const formatTime12 = (time24: string) => {
+                              const [h, m] = time24.split(":").map(Number);
+                              const period = h >= 12 ? "PM" : "AM";
+                              const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                              return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+                            };
+
+                            return (
+                              <div
+                                key={index}
+                                className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white flex items-center justify-between"
+                              >
+                                <div>
+                                  <div className="font-medium">{dayName}</div>
+                                  <div className="text-sm text-slate-400">
+                                    {formatTime12(rule.startTime)} -{" "}
+                                    {formatTime12(rule.endTime)}
+                                  </div>
+                                </div>
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-miboTeal/20 text-miboTeal">
+                                  {rule.mode === "IN_PERSON"
+                                    ? "In-Person"
+                                    : "Online"}
+                                </span>
+                              </div>
+                            );
+                          },
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                 {selectedClinician.profilePictureUrl && (
                   <div>
@@ -1299,6 +1836,15 @@ const CliniciansPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isVisible={isCreating}
+        message={
+          editingClinician ? "Updating clinician..." : "Creating clinician..."
+        }
+        minDisplayTime={3000}
+      />
     </div>
   );
 };

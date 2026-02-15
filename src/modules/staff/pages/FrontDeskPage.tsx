@@ -6,6 +6,7 @@ import Select from "../../../components/ui/Select";
 import Modal from "../../../components/ui/Modal";
 import Table, { type TableColumn } from "../../../components/ui/Table";
 import Badge from "../../../components/ui/Badge";
+import { LoadingOverlay } from "../../../components/ui/LoadingOverlay";
 import {
   Plus,
   Copy,
@@ -42,6 +43,7 @@ const FrontDeskPage: React.FC = () => {
   const [staff, setStaff] = useState<FrontDeskStaff[]>([]);
   const [centres, setCentres] = useState<Centre[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<FrontDeskStaff | null>(
@@ -151,7 +153,7 @@ const FrontDeskPage: React.FC = () => {
         return;
       }
 
-      setLoading(true);
+      setIsCreating(true);
       await staffService.createFrontDeskStaff({
         ...formData,
         centreId: parseInt(formData.centreId),
@@ -170,7 +172,7 @@ const FrontDeskPage: React.FC = () => {
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to create staff");
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
@@ -444,7 +446,7 @@ const FrontDeskPage: React.FC = () => {
             <Button
               variant="primary"
               onClick={handleCreateStaff}
-              loading={loading}
+              disabled={isCreating}
               className="flex-1"
             >
               Create Staff
@@ -552,6 +554,13 @@ const FrontDeskPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isVisible={isCreating}
+        message="Creating front desk staff..."
+        minDisplayTime={3000}
+      />
     </div>
   );
 };

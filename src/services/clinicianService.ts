@@ -44,22 +44,93 @@ export interface GetAvailabilityParams {
 }
 
 class ClinicianService {
+  // Helper method to extract error message from API response
+  private extractErrorMessage(error: any): string {
+    // Check for axios error response
+    if (error.response) {
+      const { data, status } = error.response;
+
+      // Handle different status codes
+      if (status === 400) {
+        // Bad request - validation errors
+        if (data.message) {
+          return data.message;
+        }
+        if (data.errors && Array.isArray(data.errors)) {
+          return data.errors.join(", ");
+        }
+        return "Invalid request. Please check your input.";
+      }
+
+      if (status === 409) {
+        // Conflict - duplicate entries
+        if (data.message) {
+          return data.message;
+        }
+        return "A record with this information already exists.";
+      }
+
+      if (status === 404) {
+        // Not found
+        return data.message || "Resource not found.";
+      }
+
+      if (status === 500) {
+        // Server error
+        return (
+          data.message ||
+          "An unexpected server error occurred. Please try again later."
+        );
+      }
+
+      // Generic error with message
+      if (data.message) {
+        return data.message;
+      }
+
+      // Generic error with error field
+      if (data.error) {
+        return data.error;
+      }
+    }
+
+    // Network error or no response
+    if (error.request) {
+      return "Unable to connect to the server. Please check your internet connection.";
+    }
+
+    // Other errors
+    return error.message || "An unexpected error occurred.";
+  }
+
   // Get all clinicians with optional filters
   async getClinicians(params?: GetCliniciansParams): Promise<Clinician[]> {
-    const response = await api.get("/clinicians", { params });
-    return response.data.data || response.data;
+    try {
+      const response = await api.get("/clinicians", { params });
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 
   // Get clinician by ID
   async getClinicianById(id: string): Promise<Clinician> {
-    const response = await api.get(`/clinicians/${id}`);
-    return response.data.data || response.data;
+    try {
+      const response = await api.get(`/clinicians/${id}`);
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 
   // Create new clinician
   async createClinician(data: CreateClinicianRequest): Promise<Clinician> {
-    const response = await api.post("/clinicians", data);
-    return response.data.data || response.data;
+    try {
+      const response = await api.post("/clinicians", data);
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 
   // Update clinician
@@ -67,37 +138,53 @@ class ClinicianService {
     id: string,
     data: UpdateClinicianRequest,
   ): Promise<Clinician> {
-    const response = await api.put(`/clinicians/${id}`, data);
-    return response.data.data || response.data;
+    try {
+      const response = await api.put(`/clinicians/${id}`, data);
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 
   // Delete clinician (soft delete)
   async deleteClinician(id: string): Promise<void> {
-    await api.delete(`/clinicians/${id}`);
+    try {
+      await api.delete(`/clinicians/${id}`);
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 
   // Toggle clinician active status
   async toggleActive(id: string, isActive: boolean): Promise<Clinician> {
-    const response = await api.patch(`/clinicians/${id}/toggle-active`, {
-      isActive,
-    });
-    return response.data.data || response.data;
+    try {
+      const response = await api.patch(`/clinicians/${id}/toggle-active`, {
+        isActive,
+      });
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 
   // Get clinician availability
   async getAvailability(
     params: GetAvailabilityParams,
   ): Promise<AvailabilityRule[]> {
-    const response = await api.get(
-      `/clinicians/${params.clinicianId}/availability`,
-      {
-        params: {
-          centreId: params.centreId,
-          date: params.date,
+    try {
+      const response = await api.get(
+        `/clinicians/${params.clinicianId}/availability`,
+        {
+          params: {
+            centreId: params.centreId,
+            date: params.date,
+          },
         },
-      },
-    );
-    return response.data.data || response.data;
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 
   // Update clinician availability (bulk update all rules)
@@ -105,10 +192,17 @@ class ClinicianService {
     clinicianId: string,
     rules: Omit<AvailabilityRule, "id" | "clinicianId">[],
   ): Promise<AvailabilityRule[]> {
-    const response = await api.put(`/clinicians/${clinicianId}/availability`, {
-      availability_rules: rules,
-    });
-    return response.data.data || response.data;
+    try {
+      const response = await api.put(
+        `/clinicians/${clinicianId}/availability`,
+        {
+          availability_rules: rules,
+        },
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
   }
 }
 

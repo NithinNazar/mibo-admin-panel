@@ -21,3 +21,8 @@ export type { TableProps, TableColumn } from "./Table";
 
 export { default as Badge } from "./Badge";
 export type { BadgeProps } from "./Badge";
+
+export { CalendarPicker } from "./CalendarPicker";
+export { TimeSlider } from "./TimeSlider";
+export { FieldLockInput } from "./FieldLockInput";
+export { LoadingOverlay } from "./LoadingOverlay";

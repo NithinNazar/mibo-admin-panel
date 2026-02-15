@@ -6,6 +6,7 @@ import Select from "../../../components/ui/Select";
 import Modal from "../../../components/ui/Modal";
 import Table from "../../../components/ui/Table";
 import Badge from "../../../components/ui/Badge";
+import { LoadingOverlay } from "../../../components/ui/LoadingOverlay";
 import {
   Download,
   FileText,
@@ -40,6 +41,7 @@ const CentreManagersPage: React.FC = () => {
   const [managers, setManagers] = useState<CentreManager[]>([]);
   const [centres, setCentres] = useState<Centre[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedManager, setSelectedManager] = useState<CentreManager | null>(
@@ -97,7 +99,7 @@ const CentreManagersPage: React.FC = () => {
         return;
       }
 
-      setLoading(true);
+      setIsCreating(true);
       await staffService.createCentreManager({
         ...formData,
         centreId: parseInt(formData.centreId),
@@ -118,7 +120,7 @@ const CentreManagersPage: React.FC = () => {
         error.response?.data?.message || "Failed to create centre manager",
       );
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
@@ -440,13 +442,14 @@ const CentreManagersPage: React.FC = () => {
               variant="secondary"
               onClick={() => setShowCreateModal(false)}
               className="flex-1"
+              disabled={isCreating}
             >
               Cancel
             </Button>
             <Button
               variant="primary"
               onClick={handleCreateManager}
-              loading={loading}
+              disabled={isCreating}
               className="flex-1"
             >
               Create Centre Manager
@@ -543,6 +546,13 @@ const CentreManagersPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isVisible={isCreating}
+        message="Creating centre manager..."
+        minDisplayTime={3000}
+      />
     </div>
   );
 };
