@@ -383,20 +383,24 @@ const CliniciansPage: React.FC = () => {
     setLockedFields(newLockedFields);
   };
 
-  // Check if all required fields are locked
-  const areAllRequiredFieldsLocked = (): boolean => {
+  // Check if form is valid for submission (based on validation, not locking)
+  const isFormValid = (): boolean => {
     if (editingClinician) return true; // Skip for edit mode
 
-    const requiredFields = [
-      "full_name",
-      "phone",
-      "password",
-      "primaryCentreId",
-      "consultationFee",
-      "yearsOfExperience",
-    ];
+    // Check if all required fields have values
+    const hasRequiredValues =
+      formData.full_name.trim() !== "" &&
+      formData.phone.trim() !== "" &&
+      formData.password.length >= 8 &&
+      formData.primaryCentreId > 0 &&
+      formData.consultationFee > 0 &&
+      formData.yearsOfExperience >= 0 &&
+      formData.specialization.length > 0 &&
+      formData.qualification.length > 0 &&
+      formData.languages.length > 0 &&
+      formData.consultationModes.length > 0;
 
-    return requiredFields.every((field) => lockedFields.has(field));
+    return hasRequiredValues;
   };
 
   // Handle date selection from calendar
@@ -1371,7 +1375,7 @@ const CliniciansPage: React.FC = () => {
               type="submit"
               variant="primary"
               className="flex-1"
-              disabled={isCreating || !areAllRequiredFieldsLocked()}
+              disabled={isCreating || !isFormValid()}
             >
               {editingClinician ? "Update" : "Create"} Clinician
             </Button>
