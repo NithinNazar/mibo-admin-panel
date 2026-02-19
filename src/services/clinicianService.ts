@@ -106,7 +106,7 @@ class ClinicianService {
   // Get all clinicians with optional filters
   async getClinicians(params?: GetCliniciansParams): Promise<Clinician[]> {
     try {
-      const response = await api.get("/clinicians", { params });
+      const response = await api.get("/users/clinicians", { params });
       return response.data.data || response.data;
     } catch (error) {
       throw new Error(this.extractErrorMessage(error));
@@ -116,7 +116,7 @@ class ClinicianService {
   // Get clinician by ID
   async getClinicianById(id: string): Promise<Clinician> {
     try {
-      const response = await api.get(`/clinicians/${id}`);
+      const response = await api.get(`/users/clinicians/${id}`);
       return response.data.data || response.data;
     } catch (error) {
       throw new Error(this.extractErrorMessage(error));
@@ -126,7 +126,7 @@ class ClinicianService {
   // Create new clinician
   async createClinician(data: CreateClinicianRequest): Promise<Clinician> {
     try {
-      const response = await api.post("/clinicians", data);
+      const response = await api.post("/users/clinicians", data);
       return response.data.data || response.data;
     } catch (error) {
       throw new Error(this.extractErrorMessage(error));
@@ -139,7 +139,7 @@ class ClinicianService {
     data: UpdateClinicianRequest,
   ): Promise<Clinician> {
     try {
-      const response = await api.put(`/clinicians/${id}`, data);
+      const response = await api.put(`/users/clinicians/${id}`, data);
       return response.data.data || response.data;
     } catch (error) {
       throw new Error(this.extractErrorMessage(error));
@@ -149,7 +149,7 @@ class ClinicianService {
   // Delete clinician (soft delete)
   async deleteClinician(id: string): Promise<void> {
     try {
-      await api.delete(`/clinicians/${id}`);
+      await api.delete(`/users/clinicians/${id}`);
     } catch (error) {
       throw new Error(this.extractErrorMessage(error));
     }
@@ -158,9 +158,12 @@ class ClinicianService {
   // Toggle clinician active status
   async toggleActive(id: string, isActive: boolean): Promise<Clinician> {
     try {
-      const response = await api.patch(`/clinicians/${id}/toggle-active`, {
-        isActive,
-      });
+      const response = await api.patch(
+        `/users/clinicians/${id}/toggle-active`,
+        {
+          isActive,
+        },
+      );
       return response.data.data || response.data;
     } catch (error) {
       throw new Error(this.extractErrorMessage(error));
@@ -173,7 +176,7 @@ class ClinicianService {
   ): Promise<AvailabilityRule[]> {
     try {
       const response = await api.get(
-        `/clinicians/${params.clinicianId}/availability`,
+        `/users/clinicians/${params.clinicianId}/availability`,
         {
           params: {
             centreId: params.centreId,
@@ -194,7 +197,7 @@ class ClinicianService {
   ): Promise<AvailabilityRule[]> {
     try {
       const response = await api.put(
-        `/clinicians/${clinicianId}/availability`,
+        `/users/clinicians/${clinicianId}/availability`,
         {
           availability_rules: rules,
         },
