@@ -739,11 +739,11 @@ const CliniciansPage: React.FC = () => {
       header: "Clinician",
       render: (clinician: Clinician) => (
         <div>
-          <div className="font-medium text-white">
-            {clinician.fullName || clinician.name}
-          </div>
+          <div className="font-medium text-white">{clinician.fullName}</div>
           <div className="text-sm text-slate-400">
-            {clinician.specialization}
+            {Array.isArray(clinician.specialization) 
+              ? clinician.specialization.join(", ") 
+              : clinician.specialization || ""}
           </div>
         </div>
       ),

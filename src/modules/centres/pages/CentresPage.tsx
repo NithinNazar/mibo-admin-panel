@@ -65,7 +65,7 @@ const CentresPage: React.FC = () => {
         city: centre.city,
         addressLine1: centre.address.split(",")[0] || "",
         addressLine2: centre.address.split(",")[1] || "",
-        pincode: centre.phone.split("-")[1] || "",
+        pincode: centre.pincode || "",
         contactPhone: centre.phone,
       });
     } else {

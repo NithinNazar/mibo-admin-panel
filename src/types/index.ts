@@ -41,6 +41,7 @@ export interface Centre {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  pincode?: string;
 }
 
 // Appointment Types
