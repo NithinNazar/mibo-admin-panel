@@ -99,18 +99,15 @@ const BookAppointmentPage: React.FC = () => {
   const fetchAvailability = async () => {
     try {
       setLoading(true);
-      // TODO: API returns AvailabilityRule[] but we need TimeSlot[]
-      // Need to either update API or convert the data
-      // const data = await clinicianService.getAvailability({
-      //   clinicianId: selectedClinician,
-      //   centreId: selectedCentre,
-      //   date: selectedDate,
-      // });
-      // setSlots(data);
-      setSlots([]); // Temporary: empty slots until API is fixed
-      console.log("Availability feature coming soon");
+      const data = await clinicianService.getSlots({
+        clinicianId: selectedClinician,
+        date: selectedDate,
+        centreId: selectedCentre,
+      });
+      setSlots(data);
     } catch (error: any) {
       toast.error("Failed to fetch availability");
+      setSlots([]); // Set empty array on error
     } finally {
       setLoading(false);
     }

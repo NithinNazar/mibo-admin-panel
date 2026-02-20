@@ -207,6 +207,28 @@ class ClinicianService {
       throw new Error(this.extractErrorMessage(error));
     }
   }
+
+  // Get clinician time slots for a specific date
+  async getSlots(params: {
+    clinicianId: string;
+    date: string; // YYYY-MM-DD
+    centreId?: string;
+  }): Promise<any[]> {
+    try {
+      const response = await api.get(
+        `/users/clinicians/${params.clinicianId}/slots`,
+        {
+          params: {
+            date: params.date,
+            centreId: params.centreId,
+          },
+        },
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      throw new Error(this.extractErrorMessage(error));
+    }
+  }
 }
 
 export default new ClinicianService();
