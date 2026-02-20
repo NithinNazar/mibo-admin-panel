@@ -10,12 +10,12 @@ export interface GetAppointmentsParams {
 }
 
 export interface CreateAppointmentRequest {
-  patientId: number;
-  clinicianId: number;
-  centreId: number;
-  appointmentType: AppointmentType;
-  scheduledStartAt: string; // ISO 8601 format
-  durationMinutes: number;
+  patient_id: number;
+  clinician_id: number;
+  centre_id: number;
+  appointment_type: AppointmentType;
+  scheduled_start_at: string; // ISO 8601 format
+  duration_minutes: number;
   notes?: string;
 }
 

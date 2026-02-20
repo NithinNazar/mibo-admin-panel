@@ -79,9 +79,9 @@ const AllAppointmentsPage: React.FC = () => {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (apt) =>
-          apt.patientName.toLowerCase().includes(search) ||
-          apt.patientPhone.includes(search) ||
-          apt.clinicianName.toLowerCase().includes(search),
+          apt.patient_name.toLowerCase().includes(search) ||
+          apt.patient_phone.includes(search) ||
+          apt.clinician_name.toLowerCase().includes(search),
       );
     }
 
@@ -92,7 +92,7 @@ const AllAppointmentsPage: React.FC = () => {
 
     // Centre filter
     if (centreFilter !== "ALL") {
-      filtered = filtered.filter((apt) => apt.centreId === centreFilter);
+      filtered = filtered.filter((apt) => apt.centre_id === centreFilter);
     }
 
     // Time filter (current/past/upcoming)
@@ -101,7 +101,7 @@ const AllAppointmentsPage: React.FC = () => {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduledStartAt);
+        const aptDate = new Date(apt.scheduled_start_at);
         const aptDay = new Date(
           aptDate.getFullYear(),
           aptDate.getMonth(),
@@ -125,7 +125,7 @@ const AllAppointmentsPage: React.FC = () => {
     // Date filter (specific date)
     if (dateFilter) {
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduledStartAt)
+        const aptDate = new Date(apt.scheduled_start_at)
           .toISOString()
           .split("T")[0];
         return aptDate === dateFilter;
@@ -168,14 +168,14 @@ const AllAppointmentsPage: React.FC = () => {
   const handleExportCSV = () => {
     const csvData = filteredAppointments.map((apt) => ({
       "Appointment ID": apt.id,
-      "Patient Name": apt.patientName,
-      "Patient Phone": apt.patientPhone,
-      Clinician: apt.clinicianName,
-      Centre: apt.centreName,
-      Date: new Date(apt.scheduledStartAt).toLocaleDateString(),
-      Time: new Date(apt.scheduledStartAt).toLocaleTimeString(),
-      Duration: `${apt.durationMinutes} min`,
-      Type: apt.appointmentType,
+      "Patient Name": apt.patient_name,
+      "Patient Phone": apt.patient_phone,
+      Clinician: apt.clinician_name,
+      Centre: apt.centre_name,
+      Date: new Date(apt.scheduled_start_at).toLocaleDateString(),
+      Time: new Date(apt.scheduled_start_at).toLocaleTimeString(),
+      Duration: `${apt.duration_minutes} min`,
+      Type: apt.appointment_type,
       Status: apt.status,
       Source: apt.source,
       "Booked By": apt.bookedByUserName,
@@ -199,12 +199,12 @@ const AllAppointmentsPage: React.FC = () => {
 
     const rows = filteredAppointments.map((apt) => [
       apt.id,
-      apt.patientName,
-      apt.patientPhone,
-      apt.clinicianName,
-      apt.centreName,
-      new Date(apt.scheduledStartAt).toLocaleDateString(),
-      new Date(apt.scheduledStartAt).toLocaleTimeString(),
+      apt.patient_name,
+      apt.patient_phone,
+      apt.clinician_name,
+      apt.centre_name,
+      new Date(apt.scheduled_start_at).toLocaleDateString(),
+      new Date(apt.scheduled_start_at).toLocaleTimeString(),
       apt.status,
     ]);
 
@@ -226,12 +226,12 @@ const AllAppointmentsPage: React.FC = () => {
 
     const rows = filteredAppointments.map((apt) => [
       apt.id,
-      apt.patientName,
-      apt.patientPhone,
-      apt.clinicianName,
-      apt.centreName,
-      new Date(apt.scheduledStartAt).toLocaleDateString(),
-      new Date(apt.scheduledStartAt).toLocaleTimeString(),
+      apt.patient_name,
+      apt.patient_phone,
+      apt.clinician_name,
+      apt.centre_name,
+      new Date(apt.scheduled_start_at).toLocaleDateString(),
+      new Date(apt.scheduled_start_at).toLocaleTimeString(),
       apt.status,
     ]);
 
@@ -265,10 +265,10 @@ const AllAppointmentsPage: React.FC = () => {
       render: (apt: Appointment) => (
         <div>
           <div className="font-medium text-white">
-            {apt.patientName || "Unknown"}
+            {apt.patient_name || "Unknown"}
           </div>
           <div className="text-sm text-slate-400">
-            {apt.patientPhone || "N/A"}
+            {apt.patient_phone || "N/A"}
           </div>
         </div>
       ),
@@ -277,14 +277,14 @@ const AllAppointmentsPage: React.FC = () => {
       key: "clinician",
       header: "Clinician",
       render: (apt: Appointment) => (
-        <span className="text-slate-300">{apt.clinicianName || "Unknown"}</span>
+        <span className="text-slate-300">{apt.clinician_name || "Unknown"}</span>
       ),
     },
     {
       key: "centre",
       header: "Centre",
       render: (apt: Appointment) => (
-        <span className="text-slate-300">{apt.centreName || "Unknown"}</span>
+        <span className="text-slate-300">{apt.centre_name || "Unknown"}</span>
       ),
     },
     {
@@ -293,13 +293,13 @@ const AllAppointmentsPage: React.FC = () => {
       render: (apt: Appointment) => (
         <div>
           <div className="text-white">
-            {apt.scheduledStartAt
-              ? new Date(apt.scheduledStartAt).toLocaleDateString()
+            {apt.scheduled_start_at
+              ? new Date(apt.scheduled_start_at).toLocaleDateString()
               : "N/A"}
           </div>
           <div className="text-sm text-slate-400">
-            {apt.scheduledStartAt
-              ? new Date(apt.scheduledStartAt).toLocaleTimeString([], {
+            {apt.scheduled_start_at
+              ? new Date(apt.scheduled_start_at).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })
@@ -313,7 +313,7 @@ const AllAppointmentsPage: React.FC = () => {
       header: "Type",
       render: (apt: Appointment) => (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-miboTeal/20 text-miboTeal">
-          {apt.appointmentType ? apt.appointmentType.replace("_", " ") : "N/A"}
+          {apt.appointment_type ? apt.appointment_type.replace("_", " ") : "N/A"}
         </span>
       ),
     },

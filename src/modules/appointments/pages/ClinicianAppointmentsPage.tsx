@@ -70,7 +70,7 @@ const ClinicianAppointmentsPage: React.FC = () => {
 
   const handleOpenReschedule = (appointment: Appointment) => {
     setReschedulingAppointment(appointment);
-    const date = new Date(appointment.scheduledStartAt);
+    const date = new Date(appointment.scheduled_start_at);
     setNewDateTime(date.toISOString().split("T")[0]);
     setNewTime(
       date.toLocaleTimeString("en-US", {
@@ -116,11 +116,11 @@ const ClinicianAppointmentsPage: React.FC = () => {
             </div>
             <div>
               <div className="font-medium text-white">
-                {appointment.patientName}
+                {appointment.patient_name}
               </div>
               <div className="text-sm text-slate-400 flex items-center gap-1">
                 <Phone size={12} />
-                {appointment.patientPhone}
+                {appointment.patient_phone}
               </div>
             </div>
           </div>
@@ -135,13 +135,13 @@ const ClinicianAppointmentsPage: React.FC = () => {
           <div className="flex items-center gap-2 text-slate-300">
             <Calendar size={14} className="text-slate-400" />
             <span>
-              {new Date(appointment.scheduledStartAt).toLocaleDateString()}
+              {new Date(appointment.scheduled_start_at).toLocaleDateString()}
             </span>
           </div>
           <div className="flex items-center gap-2 text-slate-300">
             <Clock size={14} className="text-slate-400" />
             <span>
-              {new Date(appointment.scheduledStartAt).toLocaleTimeString([], {
+              {new Date(appointment.scheduled_start_at).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
@@ -153,7 +153,7 @@ const ClinicianAppointmentsPage: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-2 text-slate-300">
-            {appointment.appointmentType === "ONLINE" ? (
+            {appointment.appointment_type === "ONLINE" ? (
               <>
                 <Video size={14} className="text-slate-400" />
                 <span>Online Consultation</span>
@@ -161,7 +161,7 @@ const ClinicianAppointmentsPage: React.FC = () => {
             ) : (
               <>
                 <MapPin size={14} className="text-slate-400" />
-                <span>{appointment.centreName}</span>
+                <span>{appointment.centre_name}</span>
               </>
             )}
           </div>
@@ -327,7 +327,7 @@ const ClinicianAppointmentsPage: React.FC = () => {
             <div className="p-3 bg-slate-700/50 rounded-lg">
               <div className="text-sm text-slate-400">Patient</div>
               <div className="font-medium text-white">
-                {reschedulingAppointment.patientName}
+                {reschedulingAppointment.patient_name}
               </div>
             </div>
 

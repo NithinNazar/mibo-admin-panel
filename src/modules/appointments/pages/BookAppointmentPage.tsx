@@ -160,12 +160,13 @@ const BookAppointmentPage: React.FC = () => {
 
       // Book appointment
       await appointmentService.createAppointment({
-        patientId: parseInt(patientId),
-        clinicianId: parseInt(selectedClinician),
-        centreId: parseInt(selectedCentre),
-        appointmentType: sessionType,
-        scheduledStartAt: `${selectedSlot.date}T${selectedSlot.startTime}:00Z`,
-        durationMinutes:
+        patient_id: parseInt(patientId),
+        clinician_id: parseInt(selectedClinician),
+        centre_id: parseInt(selectedCentre),
+        appointment_type: sessionType,
+        scheduled_start_at: new Date(`${selectedSlot.date}T${selectedSlot.startTime}`).toISOString(),
+        //`${selectedSlot.date}T${selectedSlot.startTime}:00Z`,
+        duration_minutes:
           parseInt(selectedSlot.endTime.split(":")[0]) * 60 +
           parseInt(selectedSlot.endTime.split(":")[1]) -
           (parseInt(selectedSlot.startTime.split(":")[0]) * 60 +
@@ -323,7 +324,7 @@ const BookAppointmentPage: React.FC = () => {
                   `}
                 >
                   <div className="font-medium text-white mb-1">
-                    {clinician.name}
+                    {clinician.fullName}
                   </div>
                   <div className="text-sm text-slate-400">
                     {clinician.specialization}
@@ -488,7 +489,7 @@ const BookAppointmentPage: React.FC = () => {
               <div>
                 <div className="text-sm text-slate-400">Clinician</div>
                 <div className="text-white font-medium">
-                  {selectedClinicianData?.name}
+                  {selectedClinicianData?.fullName}
                 </div>
                 <div className="text-sm text-slate-400">
                   {selectedClinicianData?.specialization}

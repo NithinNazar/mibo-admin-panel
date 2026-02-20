@@ -88,12 +88,12 @@ const CentreAppointmentsPage: React.FC = () => {
     let filtered = [...appointments];
 
     if (selectedCentre) {
-      filtered = filtered.filter((apt) => apt.centreId === selectedCentre);
+      filtered = filtered.filter((apt) => apt.centre_id === selectedCentre);
     }
 
     if (selectedClinician) {
       filtered = filtered.filter(
-        (apt) => apt.clinicianId === selectedClinician
+        (apt) => apt.clinician_id === selectedClinician
       );
     }
 
@@ -103,7 +103,7 @@ const CentreAppointmentsPage: React.FC = () => {
 
     if (selectedDate) {
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduledStartAt)
+        const aptDate = new Date(apt.scheduled_start_at)
           .toISOString()
           .split("T")[0];
         return aptDate === selectedDate;
@@ -127,7 +127,7 @@ const CentreAppointmentsPage: React.FC = () => {
 
   const handleOpenReschedule = (appointment: Appointment) => {
     setReschedulingAppointment(appointment);
-    const date = new Date(appointment.scheduledStartAt);
+    const date = new Date(appointment.scheduled_start_at);
     setNewDateTime(date.toISOString().split("T")[0]);
     setNewTime(
       date.toLocaleTimeString("en-US", {
@@ -180,8 +180,8 @@ const CentreAppointmentsPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <User size={16} className="text-slate-400" />
           <div>
-            <div className="font-medium text-white">{apt.patientName}</div>
-            <div className="text-sm text-slate-400">{apt.patientPhone}</div>
+            <div className="font-medium text-white">{apt.patient_name}</div>
+            <div className="text-sm text-slate-400">{apt.patient_phone}</div>
           </div>
         </div>
       ),
@@ -190,7 +190,7 @@ const CentreAppointmentsPage: React.FC = () => {
       key: "clinician",
       header: "Clinician",
       render: (apt: Appointment) => (
-        <div className="text-slate-300">{apt.clinicianName}</div>
+        <div className="text-slate-300">{apt.clinician_name}</div>
       ),
     },
     {
@@ -200,12 +200,12 @@ const CentreAppointmentsPage: React.FC = () => {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-slate-300">
             <Calendar size={14} className="text-slate-400" />
-            <span>{new Date(apt.scheduledStartAt).toLocaleDateString()}</span>
+            <span>{new Date(apt.scheduled_start_at).toLocaleDateString()}</span>
           </div>
           <div className="flex items-center gap-2 text-slate-300">
             <Clock size={14} className="text-slate-400" />
             <span>
-              {new Date(apt.scheduledStartAt).toLocaleTimeString([], {
+              {new Date(apt.scheduled_start_at).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
@@ -219,7 +219,7 @@ const CentreAppointmentsPage: React.FC = () => {
       header: "Type",
       render: (apt: Appointment) => (
         <div className="flex items-center gap-2">
-          {apt.appointmentType === "ONLINE" ? (
+          {apt.appointment_type === "ONLINE" ? (
             <>
               <Video size={16} className="text-miboTeal" />
               <span className="text-slate-300">Online</span>
@@ -358,13 +358,13 @@ const CentreAppointmentsPage: React.FC = () => {
               <div>
                 <div className="text-sm text-slate-400">Patient</div>
                 <div className="font-medium text-white">
-                  {reschedulingAppointment.patientName}
+                  {reschedulingAppointment.patient_name}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-slate-400">Clinician</div>
                 <div className="font-medium text-white">
-                  {reschedulingAppointment.clinicianName}
+                  {reschedulingAppointment.clinician_name}
                 </div>
               </div>
             </div>

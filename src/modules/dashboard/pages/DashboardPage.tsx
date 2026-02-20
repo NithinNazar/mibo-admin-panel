@@ -51,8 +51,8 @@ const DashboardPage: React.FC = () => {
         const sorted = [...appointmentsData]
           .sort(
             (a, b) =>
-              new Date(b.scheduledStartAt).getTime() -
-              new Date(a.scheduledStartAt).getTime(),
+              new Date(b.scheduled_start_at).getTime() -
+              new Date(a.scheduled_start_at).getTime(),
           )
           .slice(0, 5);
         setRecentAppointments(sorted);

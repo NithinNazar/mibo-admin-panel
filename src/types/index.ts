@@ -67,25 +67,25 @@ export type AppointmentSource =
 
 export interface Appointment {
   id: string;
-  patientId: string;
-  patientName: string;
-  patientPhone: string;
-  clinicianId: string;
-  clinicianName: string;
-  centreId: string;
-  centreName: string;
+  patient_id: string;
+  patient_name: string;
+  patient_phone: string;
+  clinician_id: string;
+  clinician_name: string;
+  centre_id: string;
+  centre_name: string;
   centreAddress: string;
-  appointmentType: AppointmentType;
-  scheduledStartAt: Date;
-  scheduledEndAt: Date;
-  durationMinutes: number;
+  appointment_type: AppointmentType;
+  scheduled_start_at: Date;
+  scheduled_end_at: Date;
+  duration_minutes: number;
   status: AppointmentStatus;
   notes?: string;
-  bookedByUserId: string;
+  booked_by_user_id: string;
   bookedByUserName: string;
   source: AppointmentSource;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 // Patient Types
