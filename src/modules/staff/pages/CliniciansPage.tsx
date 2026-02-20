@@ -413,6 +413,12 @@ const CliniciansPage: React.FC = () => {
     setSelectedTime(time);
   };
 
+  const formattedDate = (date: Date): string => {
+    if (!date) return "";
+    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return formattedDate;
+  };
+
   // Add time slot for selected date
   const handleAddTimeSlot = () => {
     if (!selectedDate) {
@@ -420,7 +426,7 @@ const CliniciansPage: React.FC = () => {
       return;
     }
 
-    const dateKey = selectedDate.toISOString().split("T")[0];
+    const dateKey = formattedDate(selectedDate);
     const currentSlots = timeSlotsByDate.get(dateKey) || [];
 
     // Check if time already exists for this date
@@ -1405,7 +1411,7 @@ const CliniciansPage: React.FC = () => {
                     Full Name
                   </label>
                   <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                    {selectedClinician.name}
+                    {selectedClinician.fullName}
                   </div>
                 </div>
 
