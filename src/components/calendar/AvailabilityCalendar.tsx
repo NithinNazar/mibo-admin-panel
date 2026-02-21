@@ -26,11 +26,11 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     selectedDate || new Date().toISOString().split("T")[0]
   );
 
-  useEffect(() => {
-    if (selectedDate) {
-      setSelectedDay(selectedDate);
-    }
-  }, [selectedDate]);
+  // useEffect(() => {
+  //   if (selectedDate) {
+  //     setSelectedDay(selectedDate);
+  //   }
+  // }, [selectedDate]);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -146,7 +146,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             <button
               key={day}
               onClick={() => handleDayClick(day)}
-              disabled={isPast || daySlots.length === 0}
+              disabled={isPast}
               className={`
                 aspect-square rounded-lg p-2 text-sm transition-all
                 ${
@@ -165,7 +165,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     : ""
                 }
                 ${
-                  isPast || daySlots.length === 0
+                  isPast
                     ? "opacity-40 cursor-not-allowed"
                     : "hover:bg-slate-600"
                 }
