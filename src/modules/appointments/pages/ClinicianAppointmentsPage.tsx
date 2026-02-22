@@ -20,7 +20,7 @@ import type { Appointment } from "../../../types";
 
 const ClinicianAppointmentsPage: React.FC = () => {
   const [currentAppointments, setCurrentAppointments] = useState<Appointment[]>(
-    []
+    [],
   );
   const [upcomingAppointments, setUpcomingAppointments] = useState<
     Appointment[]
@@ -77,7 +77,7 @@ const ClinicianAppointmentsPage: React.FC = () => {
         hour12: false,
         hour: "2-digit",
         minute: "2-digit",
-      })
+      }),
     );
   };
 
@@ -91,7 +91,7 @@ const ClinicianAppointmentsPage: React.FC = () => {
       const newStartTime = `${newDateTime}T${newTime}:00`;
       await appointmentService.rescheduleAppointment(
         reschedulingAppointment.id,
-        newStartTime
+        newStartTime,
       );
       toast.success("Appointment rescheduled successfully");
       setReschedulingAppointment(null);
@@ -146,7 +146,7 @@ const ClinicianAppointmentsPage: React.FC = () => {
                 minute: "2-digit",
               })}
               {" - "}
-              {new Date(appointment.scheduledEndAt).toLocaleTimeString([], {
+              {new Date(appointment.scheduled_end_at).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
