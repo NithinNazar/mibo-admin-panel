@@ -28,7 +28,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Check for existing session
     const checkAuth = async () => {
       try {
-        if (authService.isAuthenticated()) {
+        const token = localStorage.getItem("accessToken");
+        if (token) {
           // Validate token by fetching current user
           try {
             const currentUser = await authService.getCurrentUser();

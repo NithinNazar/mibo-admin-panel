@@ -38,13 +38,23 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("No refresh token available");
+        }
+
         const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
           refreshToken,
         });
 
-        const { accessToken } = response.data;
-        localStorage.setItem("accessToken", accessToken);
+        // Handle both response formats: { accessToken } or { data: { accessToken } }
+        const authData = response.data.data || response.data;
+        const { accessToken } = authData;
+        
+        if (!accessToken) {
+          throw new Error("No access token in refresh response");
+        }
 
+        localStorage.setItem("accessToken", accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
@@ -52,7 +62,6 @@ api.interceptors.response.use(
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
-        // Don't redirect here - let React Router handle it
         return Promise.reject(refreshError);
       }
     }

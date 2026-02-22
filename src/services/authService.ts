@@ -69,8 +69,10 @@ class AuthService {
   // Refresh access token
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
     const response = await api.post("/auth/refresh", { refreshToken });
-    localStorage.setItem("accessToken", response.data.accessToken);
-    return response.data;
+    const authData = response.data.data || response.data;
+    const { accessToken } = authData;
+    localStorage.setItem("accessToken", accessToken);
+    return { accessToken };
   }
 
   // Logout
