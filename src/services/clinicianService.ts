@@ -35,6 +35,7 @@ export interface UpdateClinicianRequest {
 export interface GetCliniciansParams {
   centreId?: string;
   specialization?: string;
+  isActive?: boolean;
 }
 
 export interface GetAvailabilityParams {

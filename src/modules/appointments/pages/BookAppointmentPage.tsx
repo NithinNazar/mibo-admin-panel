@@ -80,7 +80,7 @@ const BookAppointmentPage: React.FC = () => {
 
   const fetchClinicians = async (centreId: string) => {
     try {
-      const data = await clinicianService.getClinicians({ centreId });
+      const data = await clinicianService.getClinicians({ centreId, isActive: true });
       setClinicians(data);
     } catch (error: any) {
       toast.error("Failed to fetch clinicians");
