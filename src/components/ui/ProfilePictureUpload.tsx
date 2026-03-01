@@ -31,12 +31,7 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
       return;
     }
 
-    // Validate file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-    if (file.size > maxSize) {
-      alert("File size must be less than 5MB");
-      return;
-    }
+    // No file size limit - client wants high quality 4K images
 
     // Create preview
     const reader = new FileReader();
@@ -156,7 +151,7 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
                 <Upload size={32} className="mx-auto mb-2 text-slate-400" />
                 <p className="text-sm text-slate-300">Click to upload image</p>
                 <p className="text-xs text-slate-400 mt-1">
-                  JPEG, PNG, or WebP (max 5MB)
+                  JPEG, PNG, or WebP (High quality 4K supported)
                 </p>
               </div>
             )}

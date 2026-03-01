@@ -68,24 +68,61 @@ const QUALIFICATIONS = [
 
 // Common Expertise Areas
 const EXPERTISE_AREAS = [
-  "Anxiety Disorders",
-  "Depression",
-  "Trauma & PTSD",
-  "Stress Management",
-  "Relationship Issues",
-  "Family Therapy",
-  "Child Psychology",
-  "Adolescent Counseling",
+  "Acceptance and Commitment Therapy (ACT)",
   "Addiction Counseling",
-  "Grief Counseling",
-  "OCD",
-  "Bipolar Disorder",
-  "Schizophrenia",
-  "Eating Disorders",
-  "Sleep Disorders",
+  "Adjustment difficulties",
+  "Adolescent Counseling",
+  "Alcohol addiction",
   "Anger Management",
+  "Anxiety Disorders",
+  "Behaviour modification",
+  "Bipolar Disorder",
   "Career Counseling",
+  "Child psychiatry",
+  "Child Psychology",
+  "Cognitive Behaviour Therapy (CBT)",
+  "Community mental health care",
+  "Compassion-focused therapy",
+  "Complex psychiatric conditions",
+  "Couple therapy",
+  "De-addiction",
+  "Depression",
+  "Diagnostic evaluations",
+  "Dialectical Behaviour Therapy (DBT)",
+  "Eating Disorders",
+  "Emergency psychiatry",
+  "Emotional regulation",
+  "Family Therapy",
+  "Grief Counseling",
   "LGBTQ+ Issues",
+  "Marital concerns",
+  "Medicine-induced therapy",
+  "Mindfulness-based therapy",
+  "Mood disorders",
+  "Neurodevelopmental conditions",
+  "Neurodivergent adult support",
+  "Obsessive–Compulsive Disorder (OCD)",
+  "Personality disorders",
+  "Psycho sexual disorders",
+  "Psychodermatology",
+  "Psychodynamic therapy",
+  "Psychological assessments",
+  "Psychosis",
+  "Psychotherapy",
+  "Psychotic disorders",
+  "Queer mental health",
+  "Relationship Issues",
+  "Schema therapy",
+  "Schizophrenia",
+  "Sleep Disorders",
+  "Solution-Focused Brief Therapy (SFBT)",
+  "Stress Management",
+  "Substance use disorders",
+  "Supportive therapy",
+  "Trauma & PTSD",
+  "Trauma-focused therapy (EMDR)",
+  "Trauma-related concerns",
+  "Women psychiatry",
 ];
 
 const CliniciansPage: React.FC = () => {
@@ -415,7 +452,7 @@ const CliniciansPage: React.FC = () => {
 
   const formattedDate = (date: Date): string => {
     if (!date) return "";
-    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return formattedDate;
   };
 
@@ -747,8 +784,8 @@ const CliniciansPage: React.FC = () => {
         <div>
           <div className="font-medium text-white">{clinician.fullName}</div>
           <div className="text-sm text-slate-400">
-            {Array.isArray(clinician.specialization) 
-              ? clinician.specialization.join(", ") 
+            {Array.isArray(clinician.specialization)
+              ? clinician.specialization.join(", ")
               : clinician.specialization || ""}
           </div>
         </div>
