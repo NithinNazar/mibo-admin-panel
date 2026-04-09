@@ -23,9 +23,11 @@ import {
   exportToPDF,
   printTable,
 } from "../../../utils/exportHelpers";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const AllAppointmentsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isClinician } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [centres, setCentres] = useState<Centre[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<
@@ -277,7 +279,9 @@ const AllAppointmentsPage: React.FC = () => {
       key: "clinician",
       header: "Clinician",
       render: (apt: Appointment) => (
-        <span className="text-slate-300">{apt.clinician_name || "Unknown"}</span>
+        <span className="text-slate-300">
+          {apt.clinician_name || "Unknown"}
+        </span>
       ),
     },
     {
@@ -313,7 +317,9 @@ const AllAppointmentsPage: React.FC = () => {
       header: "Type",
       render: (apt: Appointment) => (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-miboTeal/20 text-miboTeal">
-          {apt.appointment_type ? apt.appointment_type.replace("_", " ") : "N/A"}
+          {apt.appointment_type
+            ? apt.appointment_type.replace("_", " ")
+            : "N/A"}
         </span>
       ),
     },
@@ -360,9 +366,13 @@ const AllAppointmentsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white">All Appointments</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {isClinician ? "My Appointments" : "All Appointments"}
+          </h1>
           <p className="text-slate-400 mt-1">
-            View and manage all bookings across centres
+            {isClinician
+              ? "View and manage your appointment schedule"
+              : "View and manage all bookings across centres"}
           </p>
         </div>
         <Button variant="primary" onClick={() => navigate("/book-appointment")}>
@@ -475,7 +485,7 @@ const AllAppointmentsPage: React.FC = () => {
         ) : filteredAppointments.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             <Calendar size={48} className="mx-auto mb-4 opacity-50" />
-            <p>No appointments found</p>
+            <p>No upcoming appointments</p>
           </div>
         ) : (
           <>

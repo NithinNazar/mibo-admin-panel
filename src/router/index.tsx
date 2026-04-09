@@ -1,9 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout/AdminLayout";
 import { useAuth } from "../contexts/AuthContext";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 // Auth
 import LoginPage from "../modules/auth/pages/LoginPage";
+import UnauthorizedPage from "../modules/auth/pages/UnauthorizedPage";
 
 // Dashboard
 import DashboardPage from "../modules/dashboard/pages/DashboardPage";
@@ -18,6 +20,7 @@ import AllAppointmentsPage from "../modules/appointments/pages/AllAppointmentsPa
 import CentreAppointmentsPage from "../modules/appointments/pages/CentreAppointmentsPage";
 import ClinicianAppointmentsPage from "../modules/appointments/pages/ClinicianAppointmentsPage";
 import FrontDeskBookingPage from "../modules/appointments/pages/FrontDeskBookingPage";
+import SlotBlockingPage from "../modules/appointments/pages/SlotBlockingPage";
 
 // Centres
 import CentresPage from "../modules/centres/pages/CentresPage";
@@ -32,6 +35,9 @@ import FrontDeskPage from "../modules/staff/pages/FrontDeskPage";
 // Settings
 import SettingsPage from "../modules/settings/pages/SettingsPage";
 import SupportPage from "../modules/settings/pages/SupportPage";
+
+// Profile
+import ProfilePage from "../modules/profile/pages/ProfilePage";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -54,6 +60,9 @@ function AppRouter() {
         }
       />
 
+      {/* Unauthorized route */}
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
       {/* Root redirect */}
       <Route
         path="/"
@@ -72,37 +81,146 @@ function AppRouter() {
           isAuthenticated ? <AdminLayout /> : <Navigate to="/login" replace />
         }
       >
-        <Route path="dashboard" element={<DashboardPage />} />
+        {/* Dashboard - Admin only */}
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Main */}
-        <Route path="patients" element={<PatientsListPage />} />
-        <Route path="patients/:id" element={<PatientDetailsPage />} />
+        {/* Patients - Admin only */}
+        <Route
+          path="patients"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <PatientsListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="patients/:id"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <PatientDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Appointments - All authenticated users */}
         <Route path="appointments" element={<AllAppointmentsPage />} />
-        <Route path="book-appointment" element={<BookAppointmentPage />} />
-        <Route path="front-desk-booking" element={<FrontDeskBookingPage />} />
-        <Route path="centres" element={<CentresPage />} />
+
+        {/* Appointment booking - Admin only */}
+        <Route
+          path="book-appointment"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <BookAppointmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="front-desk-booking"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <FrontDeskBookingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="slot-blocking"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <SlotBlockingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Centres - Admin only */}
+        <Route
+          path="centres"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <CentresPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="centres/:centreId/appointments"
-          element={<CentreAppointmentsPage />}
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <CentreAppointmentsPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="clinicians/:clinicianId/appointments"
-          element={<ClinicianAppointmentsPage />}
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <ClinicianAppointmentsPage />
+            </ProtectedRoute>
+          }
         />
 
-        {/* Staff */}
-        <Route path="staff/managers" element={<ManagersPage />} />
-        <Route path="staff/centre-managers" element={<CentreManagersPage />} />
-        <Route path="staff/clinicians" element={<CliniciansPage />} />
+        {/* Staff - Admin only */}
+        <Route
+          path="staff/managers"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <ManagersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="staff/centre-managers"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <CentreManagersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="staff/clinicians"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <CliniciansPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="staff/care-coordinators"
-          element={<CareCoordinatorsPage />}
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <CareCoordinatorsPage />
+            </ProtectedRoute>
+          }
         />
-        <Route path="staff/front-desk" element={<FrontDeskPage />} />
+        <Route
+          path="staff/front-desk"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <FrontDeskPage />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Settings */}
-        <Route path="settings" element={<SettingsPage />} />
+        {/* Settings - Admin only */}
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Support - All authenticated users */}
         <Route path="support" element={<SupportPage />} />
+
+        {/* Profile - All authenticated users */}
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* Fallback */}

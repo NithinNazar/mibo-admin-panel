@@ -21,6 +21,7 @@ export interface User {
   avatar?: string;
   centreIds: string[];
   assignedCentreId?: string; // Primary centre for FRONT_DESK and CENTRE_MANAGER
+  clinicianId?: number; // Clinician ID from login response for CLINICIAN role
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;

@@ -59,6 +59,7 @@ const QUALIFICATIONS = [
   "DNB",
   "M.Phil",
   "M.Sc",
+  "MA",
   "Ph.D.",
   "MRCPsych",
   "PDF",
@@ -1565,59 +1566,6 @@ const CliniciansPage: React.FC = () => {
                   </div>
                 )}
 
-                {selectedClinician.availabilityRules &&
-                  selectedClinician.availabilityRules.length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Availability Schedule
-                      </label>
-                      <div className="space-y-2">
-                        {selectedClinician.availabilityRules.map(
-                          (rule, index) => {
-                            const dayNames = [
-                              "Sunday",
-                              "Monday",
-                              "Tuesday",
-                              "Wednesday",
-                              "Thursday",
-                              "Friday",
-                              "Saturday",
-                            ];
-                            const dayName = dayNames[rule.dayOfWeek];
-
-                            // Format time for display (12-hour)
-                            const formatTime12 = (time24: string) => {
-                              const [h, m] = time24.split(":").map(Number);
-                              const period = h >= 12 ? "PM" : "AM";
-                              const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                              return `${h12}:${String(m).padStart(2, "0")} ${period}`;
-                            };
-
-                            return (
-                              <div
-                                key={index}
-                                className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white flex items-center justify-between"
-                              >
-                                <div>
-                                  <div className="font-medium">{dayName}</div>
-                                  <div className="text-sm text-slate-400">
-                                    {formatTime12(rule.startTime)} -{" "}
-                                    {formatTime12(rule.endTime)}
-                                  </div>
-                                </div>
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-miboTeal/20 text-miboTeal">
-                                  {rule.mode === "IN_PERSON"
-                                    ? "In-Person"
-                                    : "Online"}
-                                </span>
-                              </div>
-                            );
-                          },
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                 {selectedClinician.profilePictureUrl && (
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -1652,13 +1600,6 @@ const CliniciansPage: React.FC = () => {
                     className="flex-1"
                   >
                     Close
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={() => setIsEditingDetails(true)}
-                    className="flex-1"
-                  >
-                    Edit Details
                   </Button>
                 </div>
               </>

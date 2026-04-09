@@ -9,6 +9,8 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   sendOTP: (phone: string) => Promise<void>;
+  isClinician: boolean;
+  isAdmin: boolean;
 }
 
 export type LoginCredentials =
@@ -111,6 +113,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Helper computed properties for role checking
+  const isClinician = user?.role === "CLINICIAN";
+  const isAdmin = user?.role === "ADMIN" || user?.role === "MANAGER";
+
   return (
     <AuthContext.Provider
       value={{
@@ -120,6 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         logout,
         sendOTP,
+        isClinician,
+        isAdmin,
       }}
     >
       {children}

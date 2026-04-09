@@ -98,9 +98,32 @@ const LoginPage: React.FC = () => {
       console.error("Error message:", error.message);
       console.error("Error response:", error.response?.data);
 
-      toast.error(
-        error.response?.data?.message || error.message || "Login failed",
-      );
+      // Extract error message from response
+      // Backend returns: { success: false, error: { code, message } }
+      const errorData = error.response?.data?.error || error.response?.data;
+      const errorMessage = errorData?.message || error.message;
+
+      // Display user-friendly error messages
+      if (errorMessage === "Invalid credentials") {
+        toast.error(
+          "Invalid credentials. Please check your username/phone and password.",
+        );
+      } else if (errorMessage === "Access denied") {
+        toast.error(
+          "Access denied. No clinician profile found for this account.",
+        );
+      } else if (errorMessage === "Account inactive") {
+        toast.error(
+          "Your account is inactive. Please contact the administrator.",
+        );
+      } else if (errorMessage === "Invalid or expired OTP") {
+        toast.error("Invalid or expired OTP. Please request a new OTP.");
+      } else if (errorMessage === "Invalid OTP") {
+        toast.error("Invalid OTP. Please try again.");
+      } else {
+        toast.error(errorMessage || "Login failed. Please try again.");
+      }
+
       setLoading(false);
     }
   };
