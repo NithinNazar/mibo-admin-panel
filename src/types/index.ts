@@ -87,6 +87,7 @@ export interface Appointment {
   source: AppointmentSource;
   created_at: Date;
   updated_at: Date;
+  blocked_slot_id?: number;
 }
 
 // Patient Types
@@ -172,6 +173,7 @@ export interface TimeSlot {
   endTime: string; // HH:mm
   status: "available" | "booked" | "blocked";
   appointmentId?: string;
+  blockedSlotId?: number;
   mode: ConsultationMode;
 }
 
