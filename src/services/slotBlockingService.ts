@@ -1,8 +1,5 @@
 // Admin Panel - Slot Blocking Service
-import axios from "axios";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import api from "./api";
 
 export interface BlockSlotRequest {
   clinician_id: number;
@@ -52,19 +49,14 @@ class SlotBlockingService {
   }
 
   async blockSlot(data: BlockSlotRequest) {
-    const response = await axios.post(
-      `${API_BASE_URL}/admin/slots/block`,
-      data,
-      this.getAuthHeader(),
-    );
+    const response = await api.post("/admin/slots/block", data);
     return response.data;
   }
 
   async blockMultipleSlots(slots: BlockSlotRequest[], reason?: string) {
-    const response = await axios.post(
-      `${API_BASE_URL}/admin/slots/block-multiple`,
+    const response = await api.post(
+      "/admin/slots/block-multiple",
       { slots, reason },
-      this.getAuthHeader(),
     );
     return response.data;
   }
@@ -75,19 +67,17 @@ class SlotBlockingService {
     date: string,
     reason?: string,
   ) {
-    const response = await axios.post(
-      `${API_BASE_URL}/admin/slots/block-day`,
+    const response = await api.post(
+      "/admin/slots/block-day",
       { clinician_id, centre_id, date, reason },
-      this.getAuthHeader(),
-    );
+      );
     return response.data;
   }
 
   async unblockSlot(slotId: number) {
-    const response = await axios.post(
-      `${API_BASE_URL}/admin/slots/unblock/${slotId}`,
+    const response = await api.post(
+      `/admin/slots/unblock/${slotId}`,
       {},
-      this.getAuthHeader(),
     );
     return response.data;
   }
@@ -108,18 +98,16 @@ class SlotBlockingService {
       });
     }
 
-    const response = await axios.get(
-      `${API_BASE_URL}/admin/slots/blocked?${params.toString()}`,
-      this.getAuthHeader(),
+    const response = await api.get(
+      `/admin/slots/blocked?${params.toString()}`,
     );
     return response.data;
   }
 
   async getAffectedPatients(slots: BlockSlotRequest[]) {
-    const response = await axios.post(
-      `${API_BASE_URL}/admin/slots/affected-patients`,
+    const response = await api.post(
+      "/admin/slots/affected-patients",
       { slots },
-      this.getAuthHeader(),
     );
     return response.data;
   }

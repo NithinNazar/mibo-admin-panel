@@ -21,6 +21,9 @@ import CentreAppointmentsPage from "../modules/appointments/pages/CentreAppointm
 import ClinicianAppointmentsPage from "../modules/appointments/pages/ClinicianAppointmentsPage";
 import FrontDeskBookingPage from "../modules/appointments/pages/FrontDeskBookingPage";
 import SlotBlockingPage from "../modules/appointments/pages/SlotBlockingPage";
+import SlotBlockingByCentrePage from "../modules/appointments/pages/SlotBlockingByCentrePage";
+import SlotBlockingByClinicianPage from "../modules/appointments/pages/SlotBlockingByClinicianPage";
+import SlotBlockingByDatePage from "../modules/appointments/pages/SlotBlockingByDatePage";
 
 // Centres
 import CentresPage from "../modules/centres/pages/CentresPage";
@@ -144,6 +147,30 @@ function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
               <SlotBlockingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="slot-blocking/by-centre"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <SlotBlockingByCentrePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="slot-blocking/by-clinician"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <SlotBlockingByClinicianPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="slot-blocking/by-date"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+              <SlotBlockingByDatePage />
             </ProtectedRoute>
           }
         />
