@@ -19,6 +19,7 @@ import { Plus, Edit, DollarSign, Award, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
 import centreService from "../../../services/centreService";
+import staffService from "../../../services/staffService";
 import type { Clinician, Centre } from "../../../types";
 
 // Indian Languages
@@ -141,6 +142,12 @@ const CliniciansPage: React.FC = () => {
   );
   const [isEditingDetails, setIsEditingDetails] = useState(false);
 
+  // Filter and search state
+  const [selectedCentreFilter, setSelectedCentreFilter] =
+    useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
+
   // Calendar and time slot state
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>("09:00");
@@ -196,11 +203,32 @@ const CliniciansPage: React.FC = () => {
     expertise: [] as string[],
     languages: [] as string[],
     availabilitySlots: [] as AvailabilitySlot[],
+    // Credentials for editing existing clinicians
+    editUsername: "",
+    editPassword: "",
   });
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".search-dropdown-container")) {
+        setShowSearchDropdown(false);
+      }
+    };
+
+    if (showSearchDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchDropdown]);
 
   const fetchData = async () => {
     try {
@@ -218,39 +246,94 @@ const CliniciansPage: React.FC = () => {
     }
   };
 
-  const handleOpenModal = (clinician?: Clinician) => {
+  // Filter clinicians based on selected centre and search query
+  const filteredClinicians = React.useMemo(() => {
+    let filtered = clinicians;
+
+    // Filter by centre
+    if (selectedCentreFilter !== "all") {
+      filtered = filtered.filter(
+        (clinician) => clinician.primaryCentreId === selectedCentreFilter,
+      );
+    }
+
+    // Filter by search query
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((clinician) =>
+        clinician.fullName?.toLowerCase().includes(query),
+      );
+    }
+
+    return filtered;
+  }, [clinicians, selectedCentreFilter, searchQuery]);
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setShowSearchDropdown(value.trim().length > 0);
+  };
+
+  // Handle clinician selection from search dropdown
+  const handleSelectClinician = (clinician: Clinician) => {
+    setSearchQuery(clinician.fullName || "");
+    setShowSearchDropdown(false);
+    // Filter to show only this clinician
+    setSelectedCentreFilter("all");
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setShowSearchDropdown(false);
+  };
+
+  const handleOpenModal = async (clinician?: Clinician) => {
     if (clinician) {
-      setEditingClinician(clinician);
-      setFormData({
-        full_name: "",
-        phone: "",
-        email: "",
-        username: "",
-        password: "",
-        userId: parseInt(clinician.userId),
-        primaryCentreId: parseInt(clinician.primaryCentreId),
-        specialization: Array.isArray(clinician.specialization)
-          ? clinician.specialization
-          : clinician.specialization
-            ? [clinician.specialization as any]
-            : [],
-        registrationNumber: clinician.registrationNumber,
-        yearsOfExperience: clinician.yearsOfExperience,
-        consultationFee: clinician.consultationFee,
-        bio: clinician.bio || "",
-        consultationModes: clinician.consultationModes || [],
-        defaultDurationMinutes: clinician.defaultDurationMinutes,
-        profilePictureUrl: clinician.profilePictureUrl || "",
-        designation: clinician.designation || "",
-        qualification: Array.isArray(clinician.qualification)
-          ? clinician.qualification
-          : clinician.qualification
-            ? [clinician.qualification as any]
-            : [],
-        expertise: clinician.expertise || [],
-        languages: clinician.languages || [],
-        availabilitySlots: [],
-      });
+      try {
+        // Fetch full clinician details including username
+        const fullDetails = await clinicianService.getClinicianById(
+          clinician.id,
+        );
+
+        setEditingClinician(fullDetails);
+        setFormData({
+          full_name: "",
+          phone: "",
+          email: "",
+          username: "",
+          password: "",
+          userId: parseInt(fullDetails.userId),
+          primaryCentreId: parseInt(fullDetails.primaryCentreId),
+          specialization: Array.isArray(fullDetails.specialization)
+            ? fullDetails.specialization
+            : fullDetails.specialization
+              ? [fullDetails.specialization as any]
+              : [],
+          registrationNumber: fullDetails.registrationNumber,
+          yearsOfExperience: fullDetails.yearsOfExperience,
+          consultationFee: fullDetails.consultationFee,
+          bio: fullDetails.bio || "",
+          consultationModes: fullDetails.consultationModes || [],
+          defaultDurationMinutes: fullDetails.defaultDurationMinutes,
+          profilePictureUrl: fullDetails.profilePictureUrl || "",
+          designation: fullDetails.designation || "",
+          qualification: Array.isArray(fullDetails.qualification)
+            ? fullDetails.qualification
+            : fullDetails.qualification
+              ? [fullDetails.qualification as any]
+              : [],
+          expertise: fullDetails.expertise || [],
+          languages: fullDetails.languages || [],
+          availabilitySlots: [],
+          editUsername: (fullDetails as any).username || "",
+          editPassword: "",
+        });
+      } catch (error: any) {
+        toast.error(error.message || "Failed to fetch clinician details");
+        return;
+      }
     } else {
       setEditingClinician(null);
       setFormData({
@@ -276,6 +359,8 @@ const CliniciansPage: React.FC = () => {
         expertise: [],
         languages: [],
         availabilitySlots: [],
+        editUsername: "",
+        editPassword: "",
       });
       // Reset calendar state
       setSelectedDate(null);
@@ -597,6 +682,7 @@ const CliniciansPage: React.FC = () => {
 
     try {
       if (editingClinician) {
+        // Update existing clinician
         await clinicianService.updateClinician(editingClinician.id, {
           primaryCentreId: formData.primaryCentreId,
           specialization: formData.specialization,
@@ -611,6 +697,21 @@ const CliniciansPage: React.FC = () => {
           expertise: formData.expertise,
           languages: formData.languages,
         });
+
+        // Update credentials if username or password was provided
+        if (formData.editUsername || formData.editPassword) {
+          const credentials: { username?: string; password?: string } = {};
+          if (formData.editUsername)
+            credentials.username = formData.editUsername;
+          if (formData.editPassword)
+            credentials.password = formData.editPassword;
+
+          await staffService.updateClinicianCredentials(
+            editingClinician.id,
+            credentials,
+          );
+        }
+
         toast.success("Clinician updated successfully");
       } else {
         // Convert calendar slots to API format
@@ -734,6 +835,7 @@ const CliniciansPage: React.FC = () => {
     if (!selectedClinician) return;
 
     try {
+      // Update clinician profile
       await clinicianService.updateClinician(selectedClinician.id, {
         primaryCentreId: detailsFormData.primaryCentreId,
         specialization: detailsFormData.specialization,
@@ -902,19 +1004,116 @@ const CliniciansPage: React.FC = () => {
         </Button>
       </div>
 
+      {/* Filters and Search */}
+      <Card>
+        <div className="flex gap-4 items-end">
+          {/* Centre Filter */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Filter by Centre
+            </label>
+            <Select
+              value={selectedCentreFilter}
+              onChange={(e) => setSelectedCentreFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Centres" },
+                ...centres.map((centre) => ({
+                  value: centre.id,
+                  label: centre.name,
+                })),
+              ]}
+            />
+          </div>
+
+          {/* Search by Name */}
+          <div className="flex-1 relative search-dropdown-container">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Search by Clinician Name
+            </label>
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Type clinician name..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onFocus={() =>
+                  searchQuery.trim().length > 0 && setShowSearchDropdown(true)
+                }
+              />
+              {searchQuery && (
+                <button
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Search Dropdown */}
+            {showSearchDropdown && filteredClinicians.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {filteredClinicians.map((clinician) => (
+                  <button
+                    key={clinician.id}
+                    onClick={() => handleSelectClinician(clinician)}
+                    className="w-full px-4 py-3 text-left hover:bg-slate-600 transition-colors border-b border-slate-600 last:border-b-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-white">
+                          {clinician.fullName}
+                        </div>
+                        <div className="text-sm text-slate-400">
+                          {clinician.primaryCentreName}
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          clinician.isActive
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-red-500/20 text-red-400"
+                        }`}
+                      >
+                        {clinician.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Clear Filters Button */}
+          {(selectedCentreFilter !== "all" || searchQuery) && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setSelectedCentreFilter("all");
+                handleClearSearch();
+              }}
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </Card>
+
       <Card>
         {loading ? (
           <div className="text-center py-8 text-slate-400">
             Loading clinicians...
           </div>
-        ) : clinicians.length === 0 ? (
+        ) : filteredClinicians.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
-            No clinicians found. Add your first clinician to get started.
+            {clinicians.length === 0
+              ? "No clinicians found. Add your first clinician to get started."
+              : "No clinicians match your filters. Try adjusting your search."}
           </div>
         ) : (
           <Table
             columns={columns}
-            data={clinicians}
+            data={filteredClinicians}
             keyExtractor={(clinician) => clinician.id.toString()}
           />
         )}
@@ -1089,6 +1288,60 @@ const CliniciansPage: React.FC = () => {
             )}
 
             {editingClinician && (
+              <>
+                {/* Credentials Section for Editing Existing Clinicians */}
+                <div className="bg-slate-700/50 p-4 rounded-lg space-y-4 mb-4">
+                  <h3 className="text-sm font-semibold text-miboTeal mb-2">
+                    Login Credentials
+                  </h3>
+                  <Input
+                    label="Username"
+                    type="text"
+                    placeholder="Enter username (alphanumeric, 3-50 characters)"
+                    value={formData.editUsername}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        editUsername: e.target.value,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-slate-400 -mt-2">
+                    Requirements: Alphanumeric only, 3-50 characters
+                  </p>
+                  <Input
+                    label="Password"
+                    type="text"
+                    placeholder="Enter password (minimum 8 characters)"
+                    value={formData.editPassword}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        editPassword: e.target.value,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-slate-400 -mt-2">
+                    Requirements: Minimum 8 characters
+                  </p>
+                </div>
+
+                <Input
+                  label="Registration Number (Legacy)"
+                  type="text"
+                  placeholder="Medical registration number"
+                  value={formData.registrationNumber}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      registrationNumber: e.target.value,
+                    })
+                  }
+                />
+              </>
+            )}
+
+            {!editingClinician && (
               <Input
                 label="Registration Number (Legacy)"
                 type="text"
@@ -1450,6 +1703,29 @@ const CliniciansPage: React.FC = () => {
                   </label>
                   <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
                     {selectedClinician.fullName}
+                  </div>
+                </div>
+
+                {/* Login Credentials Display */}
+                <div className="bg-slate-700/50 p-4 rounded-lg space-y-4">
+                  <h3 className="text-sm font-semibold text-miboTeal mb-2">
+                    Login Credentials
+                  </h3>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Username
+                    </label>
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                      {(selectedClinician as any).username || "Not set"}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Password
+                    </label>
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
+                      ••••••••
+                    </div>
                   </div>
                 </div>
 

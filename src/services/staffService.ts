@@ -140,6 +140,20 @@ class StaffService {
     });
     return response.data.data || response.data;
   }
+
+  /**
+   * Update clinician credentials (username and/or password)
+   */
+  async updateClinicianCredentials(
+    clinicianId: string,
+    credentials: { username?: string; password?: string },
+  ): Promise<any> {
+    const response = await api.patch(
+      `/clinicians/${clinicianId}/credentials`,
+      credentials,
+    );
+    return response.data.data || response.data;
+  }
 }
 
 export default new StaffService();

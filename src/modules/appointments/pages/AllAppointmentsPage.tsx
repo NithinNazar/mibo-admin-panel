@@ -24,6 +24,7 @@ import {
   printTable,
 } from "../../../utils/exportHelpers";
 import { useAuth } from "../../../contexts/AuthContext";
+import ClinicianDashboard from "../../../components/Clinician/ClinicianDashboard";
 
 const AllAppointmentsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -362,17 +363,19 @@ const AllAppointmentsPage: React.FC = () => {
     },
   ];
 
+  // If user is a clinician, render the ClinicianDashboard
+  if (isClinician) {
+    return <ClinicianDashboard />;
+  }
+
+  // For admins and managers, render the full appointments management interface
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white">
-            {isClinician ? "My Appointments" : "All Appointments"}
-          </h1>
+          <h1 className="text-2xl font-bold text-white">All Appointments</h1>
           <p className="text-slate-400 mt-1">
-            {isClinician
-              ? "View and manage your appointment schedule"
-              : "View and manage all bookings across centres"}
+            View and manage all bookings across centres
           </p>
         </div>
         <Button variant="primary" onClick={() => navigate("/book-appointment")}>

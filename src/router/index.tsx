@@ -40,7 +40,7 @@ import SupportPage from "../modules/settings/pages/SupportPage";
 import ProfilePage from "../modules/profile/pages/ProfilePage";
 
 function AppRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isClinician } = useAuth();
 
   if (isLoading) {
     return (
@@ -56,7 +56,14 @@ function AppRouter() {
       <Route
         path="/login"
         element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+          isAuthenticated ? (
+            <Navigate
+              to={isClinician ? "/appointments" : "/dashboard"}
+              replace
+            />
+          ) : (
+            <LoginPage />
+          )
         }
       />
 
@@ -68,7 +75,10 @@ function AppRouter() {
         path="/"
         element={
           isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
+            <Navigate
+              to={isClinician ? "/appointments" : "/dashboard"}
+              replace
+            />
           ) : (
             <Navigate to="/login" replace />
           )

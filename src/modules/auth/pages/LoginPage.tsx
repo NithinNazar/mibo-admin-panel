@@ -84,12 +84,29 @@ const LoginPage: React.FC = () => {
       console.log("Login successful, showing toast");
       toast.success("Login successful!");
 
-      console.log("Attempting navigation to dashboard...");
-      console.log("Current path:", window.location.pathname);
+      console.log("Attempting navigation...");
 
-      // Navigate to dashboard using React Router
-      console.log("Redirecting to /dashboard");
-      navigate("/dashboard", { replace: true });
+      // Wait a bit for user state to update
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Get user from localStorage to check role
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        console.log("User role:", userData.role);
+
+        // Navigate based on user role - clinicians go to appointments, others to dashboard
+        if (userData.role === "CLINICIAN") {
+          console.log("Redirecting clinician to /appointments");
+          navigate("/appointments", { replace: true });
+        } else {
+          console.log("Redirecting to /dashboard");
+          navigate("/dashboard", { replace: true });
+        }
+      } else {
+        // Fallback to dashboard
+        navigate("/dashboard", { replace: true });
+      }
 
       console.log("After redirect call");
     } catch (error: any) {
