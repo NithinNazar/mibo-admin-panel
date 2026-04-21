@@ -39,25 +39,16 @@ export interface BlockedSlot {
 }
 
 class SlotBlockingService {
-  private getAuthHeader() {
-    const token = localStorage.getItem("adminToken");
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  }
-
   async blockSlot(data: BlockSlotRequest) {
     const response = await api.post("/admin/slots/block", data);
     return response.data;
   }
 
   async blockMultipleSlots(slots: BlockSlotRequest[], reason?: string) {
-    const response = await api.post(
-      "/admin/slots/block-multiple",
-      { slots, reason },
-    );
+    const response = await api.post("/admin/slots/block-multiple", {
+      slots,
+      reason,
+    });
     return response.data;
   }
 
@@ -67,18 +58,17 @@ class SlotBlockingService {
     date: string,
     reason?: string,
   ) {
-    const response = await api.post(
-      "/admin/slots/block-day",
-      { clinician_id, centre_id, date, reason },
-      );
+    const response = await api.post("/admin/slots/block-day", {
+      clinician_id,
+      centre_id,
+      date,
+      reason,
+    });
     return response.data;
   }
 
   async unblockSlot(slotId: number) {
-    const response = await api.post(
-      `/admin/slots/unblock/${slotId}`,
-      {},
-    );
+    const response = await api.post(`/admin/slots/unblock/${slotId}`, {});
     return response.data;
   }
 
@@ -98,17 +88,14 @@ class SlotBlockingService {
       });
     }
 
-    const response = await api.get(
-      `/admin/slots/blocked?${params.toString()}`,
-    );
+    const response = await api.get(`/admin/slots/blocked?${params.toString()}`);
     return response.data;
   }
 
   async getAffectedPatients(slots: BlockSlotRequest[]) {
-    const response = await api.post(
-      "/admin/slots/affected-patients",
-      { slots },
-    );
+    const response = await api.post("/admin/slots/affected-patients", {
+      slots,
+    });
     return response.data;
   }
 }

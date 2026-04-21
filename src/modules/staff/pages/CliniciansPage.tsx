@@ -20,7 +20,7 @@ import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
 import centreService from "../../../services/centreService";
 import staffService from "../../../services/staffService";
-import type { Clinician, Centre } from "../../../types";
+import type { Clinician, Centre, ConsultationMode } from "../../../types";
 
 // Indian Languages
 const INDIAN_LANGUAGES = [
@@ -164,6 +164,10 @@ const CliniciansPage: React.FC = () => {
     [key: string]: string;
   }>({});
 
+  // Clinician slots state
+  const [clinicianSlots, setClinicianSlots] = useState<any[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+
   const [detailsFormData, setDetailsFormData] = useState({
     primaryCentreId: 0,
     specialization: [] as string[],
@@ -298,6 +302,9 @@ const CliniciansPage: React.FC = () => {
         );
 
         setEditingClinician(fullDetails);
+
+        // Fetch clinician slots for editing
+        await fetchClinicianSlots(clinician.id);
         setFormData({
           full_name: "",
           phone: "",
@@ -667,6 +674,7 @@ const CliniciansPage: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingClinician(null);
+    setClinicianSlots([]); // Clear slots when closing modal
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -712,7 +720,38 @@ const CliniciansPage: React.FC = () => {
           );
         }
 
-        toast.success("Clinician updated successfully");
+        // Update availability if slots were added via calendar picker
+        if (timeSlotsByDate.size > 0) {
+          try {
+            const availabilitySlots = convertSlotsToAPIFormat();
+            const availabilityRules = availabilitySlots.map((slot) => ({
+              centreId: formData.primaryCentreId.toString(),
+              dayOfWeek: slot.dayOfWeek,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              slotDurationMinutes: sessionLength,
+              mode: slot.consultationMode as ConsultationMode,
+            }));
+
+            await clinicianService.updateAvailability(
+              editingClinician.id,
+              availabilityRules,
+            );
+          } catch (availabilityError: any) {
+            // Log availability update error but don't fail the entire operation
+            console.error("Failed to update availability:", availabilityError);
+            toast.error(
+              availabilityError.message ||
+                "Profile updated but failed to save availability slots",
+            );
+          }
+        }
+
+        toast.success(
+          timeSlotsByDate.size > 0
+            ? "Clinician profile and availability updated successfully"
+            : "Clinician updated successfully",
+        );
       } else {
         // Convert calendar slots to API format
         const availabilitySlots = convertSlotsToAPIFormat();
@@ -800,6 +839,9 @@ const CliniciansPage: React.FC = () => {
       setSelectedClinician(details);
       setIsEditingDetails(false);
 
+      // Fetch clinician slots
+      await fetchClinicianSlots(clinician.id);
+
       // Initialize editable form data
       setDetailsFormData({
         primaryCentreId: parseInt(details.primaryCentreId),
@@ -828,6 +870,64 @@ const CliniciansPage: React.FC = () => {
       setShowDetailsModal(true);
     } catch (error: any) {
       toast.error(error.message || "Failed to fetch clinician details");
+    }
+  };
+
+  // Fetch clinician slots from API
+  const fetchClinicianSlots = async (clinicianId: string) => {
+    try {
+      setSlotsLoading(true);
+
+      // Get today's date and 30 days from now
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() + 30);
+
+      const startDateStr = today.toISOString().split("T")[0];
+      const endDateStr = endDate.toISOString().split("T")[0];
+
+      // Fetch slots for the clinician
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/booking/clinician-slots?clinicianId=${clinicianId}&startDate=${startDateStr}&endDate=${endDateStr}`,
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setClinicianSlots(data.data || []);
+      } else {
+        console.error("Failed to fetch clinician slots");
+        setClinicianSlots([]);
+      }
+    } catch (error) {
+      console.error("Error fetching clinician slots:", error);
+      setClinicianSlots([]);
+    } finally {
+      setSlotsLoading(false);
+    }
+  };
+
+  // Delete a specific slot
+  const handleDeleteSlot = async (slotId: string) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/booking/slots/${slotId}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (response.ok) {
+        toast.success("Slot deleted successfully");
+        // Refresh slots
+        if (selectedClinician) {
+          await fetchClinicianSlots(selectedClinician.id);
+        }
+      } else {
+        toast.error("Failed to delete slot");
+      }
+    } catch (error) {
+      console.error("Error deleting slot:", error);
+      toast.error("Failed to delete slot");
     }
   };
 
@@ -1513,6 +1613,74 @@ const CliniciansPage: React.FC = () => {
               </p>
             )}
 
+            {/* Existing Slots Section - Only show in Edit mode */}
+            {editingClinician && (
+              <div className="space-y-4 bg-slate-700/30 p-4 rounded-lg">
+                <h3 className="text-sm font-semibold text-miboTeal">
+                  Existing Slots (Next 30 Days)
+                </h3>
+                {slotsLoading ? (
+                  <div className="text-center py-4">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-miboTeal"></div>
+                    <p className="mt-2 text-xs text-slate-400">
+                      Loading slots...
+                    </p>
+                  </div>
+                ) : clinicianSlots.length > 0 ? (
+                  <div className="space-y-3">
+                    {clinicianSlots.map((daySlots) => (
+                      <div
+                        key={daySlots.date}
+                        className="bg-slate-700/50 p-3 rounded-lg"
+                      >
+                        <div className="text-sm font-medium text-miboTeal mb-2">
+                          {new Date(
+                            daySlots.date + "T00:00:00",
+                          ).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {daySlots.slots.map((slot: any) => (
+                            <div
+                              key={slot.id}
+                              className="flex items-center gap-2 bg-slate-600 px-3 py-1 rounded-md text-sm text-slate-200"
+                            >
+                              <span>
+                                {slot.startTime} - {slot.endTime}
+                                {!slot.available && (
+                                  <span className="ml-2 text-red-400">
+                                    (Booked)
+                                  </span>
+                                )}
+                              </span>
+                              {slot.available && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSlot(slot.id)}
+                                  className="text-red-400 hover:text-red-300"
+                                  title="Delete slot"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-slate-400">
+                    No existing slots found
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Availability Schedule - Calendar + Time Slider */}
             <div className="space-y-4 bg-slate-700/30 p-4 rounded-lg">
               <h3 className="text-sm font-semibold text-miboTeal">
@@ -1687,6 +1855,7 @@ const CliniciansPage: React.FC = () => {
           setShowDetailsModal(false);
           setSelectedClinician(null);
           setIsEditingDetails(false);
+          setClinicianSlots([]); // Clear slots when closing modal
         }}
         title={
           isEditingDetails ? "Edit Clinician Details" : "Clinician Details"
@@ -1864,6 +2033,57 @@ const CliniciansPage: React.FC = () => {
                   >
                     {selectedClinician.isActive ? "Active" : "Inactive"}
                   </Badge>
+                </div>
+
+                {/* Available Slots Section - Read Only */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Available Slots (Next 30 Days)
+                  </label>
+                  {slotsLoading ? (
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
+                      Loading slots...
+                    </div>
+                  ) : clinicianSlots.length > 0 ? (
+                    <div className="space-y-3">
+                      {clinicianSlots.map((daySlots) => (
+                        <div
+                          key={daySlots.date}
+                          className="bg-slate-700/50 p-3 rounded-lg"
+                        >
+                          <div className="text-sm font-medium text-miboTeal mb-2">
+                            {new Date(
+                              daySlots.date + "T00:00:00",
+                            ).toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {daySlots.slots.map((slot: any) => (
+                              <div
+                                key={slot.id}
+                                className="bg-slate-600 px-3 py-1 rounded-md text-sm text-slate-200"
+                              >
+                                {slot.startTime} - {slot.endTime}
+                                {!slot.available && (
+                                  <span className="ml-2 text-red-400">
+                                    (Booked)
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
+                      No slots available
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 pt-4">
