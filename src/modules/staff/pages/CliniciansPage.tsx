@@ -893,7 +893,34 @@ const CliniciansPage: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setClinicianSlots(data.data || []);
+        const slots = data.data || [];
+
+        // Group slots by date
+        const slotsByDate = slots.reduce((acc: any, slot: any) => {
+          const date = slot.date;
+          if (!acc[date]) {
+            acc[date] = [];
+          }
+          acc[date].push({
+            id: slot.id || `${slot.date}-${slot.startTime}`,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            available: slot.status === "available",
+            appointmentId: slot.appointmentId,
+            mode: slot.mode,
+          });
+          return acc;
+        }, {});
+
+        // Convert to array format expected by UI
+        const formattedSlots = Object.keys(slotsByDate)
+          .sort()
+          .map((date) => ({
+            date,
+            slots: slotsByDate[date],
+          }));
+
+        setClinicianSlots(formattedSlots);
       } else {
         console.error("Failed to fetch clinician slots");
         setClinicianSlots([]);
@@ -1737,11 +1764,60 @@ const CliniciansPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Display Existing Slots from Database */}
+              {editingClinician && clinicianSlots.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h4 className="text-sm font-medium text-slate-300">
+                    Existing Slots (Next 30 Days)
+                  </h4>
+                  {slotsLoading ? (
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
+                      Loading slots...
+                    </div>
+                  ) : (
+                    clinicianSlots.map((daySlots) => (
+                      <div
+                        key={daySlots.date}
+                        className="bg-slate-700/50 p-3 rounded-lg"
+                      >
+                        <div className="text-sm font-medium text-miboTeal mb-2">
+                          {new Date(
+                            daySlots.date + "T00:00:00",
+                          ).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {daySlots.slots.map((slot: any) => (
+                            <div
+                              key={slot.id}
+                              className={`px-3 py-1 rounded-md text-sm ${
+                                slot.available
+                                  ? "bg-green-600/20 text-green-300"
+                                  : "bg-red-600/20 text-red-300"
+                              }`}
+                            >
+                              {slot.startTime} - {slot.endTime}
+                              {!slot.available && (
+                                <span className="ml-2">(Booked)</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
               {/* Display Added Slots */}
               {timeSlotsByDate.size > 0 && (
                 <div className="mt-4 space-y-3">
                   <h4 className="text-sm font-medium text-slate-300">
-                    Added Time Slots (
+                    Newly Added Time Slots (
                     {Array.from(timeSlotsByDate.values()).reduce(
                       (sum, slots) => sum + slots.length,
                       0,
