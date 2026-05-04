@@ -64,10 +64,10 @@ const BookAppointmentPage: React.FC = () => {
   }, [selectedCentre]);
 
   useEffect(() => {
-    if (selectedClinician && selectedDate) {
-      fetchAvailability();
+    if (selectedClinician) {
+      fetchAvailabilityRange();
     }
-  }, [selectedClinician, selectedDate]);
+  }, [selectedClinician]);
 
   const fetchCentres = async () => {
     try {
@@ -80,7 +80,10 @@ const BookAppointmentPage: React.FC = () => {
 
   const fetchClinicians = async (centreId: string) => {
     try {
-      const data = await clinicianService.getClinicians({ centreId, isActive: true });
+      const data = await clinicianService.getClinicians({
+        centreId,
+        isActive: true,
+      });
       setClinicians(data);
     } catch (error: any) {
       toast.error("Failed to fetch clinicians");
@@ -96,18 +99,38 @@ const BookAppointmentPage: React.FC = () => {
     }
   };
 
-  const fetchAvailability = async () => {
+  const fetchAvailabilityRange = async () => {
     try {
       setLoading(true);
-      const data = await clinicianService.getSlots({
-        clinicianId: selectedClinician,
-        date: selectedDate,
-        centreId: selectedCentre,
-      });
-      setSlots(data);
+
+      // Fetch slots for next 60 days to show dots on calendar
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() + 60);
+
+      const startDateStr = today.toISOString().split("T")[0];
+      const endDateStr = endDate.toISOString().split("T")[0];
+
+      // Use the clinician-slots endpoint that returns slots for a date range
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/booking/clinician-slots?clinicianId=${selectedClinician}&startDate=${startDateStr}&endDate=${endDateStr}&centreId=${selectedCentre}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        },
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        const slotsData = result.data || [];
+        setSlots(slotsData);
+      } else {
+        setSlots([]);
+      }
     } catch (error: any) {
-      toast.error("Failed to fetch availability");
-      setSlots([]); // Set empty array on error
+      console.error("Failed to fetch availability range:", error);
+      setSlots([]);
     } finally {
       setLoading(false);
     }
@@ -164,7 +187,9 @@ const BookAppointmentPage: React.FC = () => {
         clinician_id: parseInt(selectedClinician),
         centre_id: parseInt(selectedCentre),
         appointment_type: sessionType,
-        scheduled_start_at: new Date(`${selectedSlot.date}T${selectedSlot.startTime}`).toISOString(),
+        scheduled_start_at: new Date(
+          `${selectedSlot.date}T${selectedSlot.startTime}`,
+        ).toISOString(),
         //`${selectedSlot.date}T${selectedSlot.startTime}:00Z`,
         duration_minutes:
           parseInt(selectedSlot.endTime.split(":")[0]) * 60 +

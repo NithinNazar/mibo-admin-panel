@@ -168,6 +168,14 @@ const CliniciansPage: React.FC = () => {
   const [clinicianSlots, setClinicianSlots] = useState<any[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
+  // Delete confirmation modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [slotToDelete, setSlotToDelete] = useState<{
+    ruleId: string;
+    date: string;
+    time: string;
+  } | null>(null);
+
   const [detailsFormData, setDetailsFormData] = useState({
     primaryCentreId: 0,
     specialization: [] as string[],
@@ -723,20 +731,92 @@ const CliniciansPage: React.FC = () => {
         // Update availability if slots were added via calendar picker
         if (timeSlotsByDate.size > 0) {
           try {
-            const availabilitySlots = convertSlotsToAPIFormat();
-            const availabilityRules = availabilitySlots.map((slot) => ({
+            // STEP 1: Fetch existing availability rules
+            const existingRulesResponse = await fetch(
+              `${import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api"}/users/clinicians/${editingClinician.id}/availability`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                },
+              },
+            );
+
+            let existingRules: any[] = [];
+            if (existingRulesResponse.ok) {
+              const existingRulesData = await existingRulesResponse.json();
+              existingRules = existingRulesData.data || [];
+              console.log(
+                "[DEBUG] Existing rules before merge:",
+                existingRules.length,
+              );
+            }
+
+            // STEP 2: Convert new slots from calendar picker to API format
+            const newAvailabilitySlots = convertSlotsToAPIFormat();
+            const newAvailabilityRules = newAvailabilitySlots.map((slot) => ({
               centreId: formData.primaryCentreId.toString(),
+              centre_id: formData.primaryCentreId.toString(),
               dayOfWeek: slot.dayOfWeek,
               startTime: slot.startTime,
               endTime: slot.endTime,
               slotDurationMinutes: sessionLength,
               mode: slot.consultationMode as ConsultationMode,
+              consultationMode: slot.consultationMode as ConsultationMode,
             }));
 
+            // STEP 3: Convert existing rules to the same format for merging
+            const existingRulesFormatted = existingRules.map((rule) => ({
+              centreId:
+                rule.centre_id?.toString() ||
+                formData.primaryCentreId.toString(),
+              centre_id:
+                rule.centre_id?.toString() ||
+                formData.primaryCentreId.toString(),
+              dayOfWeek: Number(rule.day_of_week),
+              startTime: rule.start_time.substring(0, 5), // Remove seconds if present
+              endTime: rule.end_time.substring(0, 5),
+              slotDurationMinutes: rule.slot_duration_minutes || sessionLength,
+              mode: (rule.mode || rule.consultation_mode) as ConsultationMode,
+              consultationMode: (rule.mode ||
+                rule.consultation_mode) as ConsultationMode,
+            }));
+
+            // STEP 4: Merge existing and new rules (avoid duplicates)
+            const mergedRules = [...existingRulesFormatted];
+
+            for (const newRule of newAvailabilityRules) {
+              // Check if this rule already exists
+              const isDuplicate = existingRulesFormatted.some(
+                (existing) =>
+                  existing.dayOfWeek === newRule.dayOfWeek &&
+                  existing.startTime === newRule.startTime &&
+                  existing.endTime === newRule.endTime &&
+                  existing.mode === newRule.mode &&
+                  existing.centreId === newRule.centreId,
+              );
+
+              if (!isDuplicate) {
+                mergedRules.push(newRule);
+              }
+            }
+
+            console.log("[DEBUG] Merged rules count:", mergedRules.length);
+            console.log(
+              "[DEBUG] New rules added:",
+              newAvailabilityRules.length,
+            );
+
+            // STEP 5: Send merged rules to API
             await clinicianService.updateAvailability(
               editingClinician.id,
-              availabilityRules,
+              mergedRules as any,
             );
+
+            // Refetch slots after successful update
+            await fetchClinicianSlots(editingClinician.id);
+
+            // Clear the calendar picker slots
+            setTimeSlotsByDate(new Map());
           } catch (availabilityError: any) {
             // Log availability update error but don't fail the entire operation
             console.error("Failed to update availability:", availabilityError);
@@ -878,31 +958,146 @@ const CliniciansPage: React.FC = () => {
     try {
       setSlotsLoading(true);
 
-      // Get today's date and 30 days from now
+      // Get date range: 30 days in the past to 90 days in the future
       const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - 30); // 30 days ago
       const endDate = new Date(today);
-      endDate.setDate(today.getDate() + 30);
+      endDate.setDate(today.getDate() + 90); // 90 days from now
 
-      const startDateStr = today.toISOString().split("T")[0];
+      const startDateStr = startDate.toISOString().split("T")[0];
       const endDateStr = endDate.toISOString().split("T")[0];
 
       // Fetch slots for the clinician
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/booking/clinician-slots?clinicianId=${clinicianId}&startDate=${startDateStr}&endDate=${endDateStr}`,
+        `${import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api"}/booking/clinician-slots?clinicianId=${clinicianId}&startDate=${startDateStr}&endDate=${endDateStr}`,
       );
 
       if (response.ok) {
         const data = await response.json();
         const slots = data.data || [];
 
-        // Group slots by date
+        // Also fetch availability rules to get rule IDs
+        const rulesResponse = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api"}/users/clinicians/${clinicianId}/availability`,
+        );
+
+        let availabilityRules: any[] = [];
+        if (rulesResponse.ok) {
+          const rulesData = await rulesResponse.json();
+          availabilityRules = rulesData.data || [];
+          console.log(
+            "[DEBUG] Availability rules fetched:",
+            JSON.stringify(availabilityRules, null, 2),
+          );
+        } else {
+          console.error(
+            "[DEBUG] Failed to fetch availability rules:",
+            rulesResponse.status,
+          );
+        }
+
+        console.log(
+          "[DEBUG] Slots to process:",
+          JSON.stringify(slots.slice(0, 2), null, 2),
+        );
+
+        // Group slots by date and attach rule IDs
         const slotsByDate = slots.reduce((acc: any, slot: any) => {
           const date = slot.date;
           if (!acc[date]) {
             acc[date] = [];
           }
+
+          // Find matching availability rule for this slot
+          // Parse date reliably to avoid timezone issues
+          const [year, month, day] = date.split("-").map(Number);
+          const slotDate = new Date(year, month - 1, day); // month is 0-indexed
+          const dayOfWeek = slotDate.getDay();
+
+          // Normalize time format (remove seconds if present)
+          const normalizeTime = (time: string) => {
+            if (!time) return time;
+            // If time has seconds (HH:MM:SS), remove them to get HH:MM
+            return time.substring(0, 5);
+          };
+
+          const normalizedSlotTime = normalizeTime(slot.startTime);
+
+          console.log("[DEBUG] Trying to match slot:", {
+            date,
+            slotStartTime: slot.startTime,
+            normalizedSlotTime,
+            slotMode: slot.mode,
+            calculatedDayOfWeek: dayOfWeek,
+            dayName: [
+              "Sunday",
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+            ][dayOfWeek],
+          });
+
+          const matchingRule = availabilityRules.find((rule: any) => {
+            const normalizedRuleTime = normalizeTime(rule.start_time);
+            // Ensure both day_of_week values are numbers for comparison
+            const ruleDayOfWeek = Number(rule.day_of_week);
+            const dayMatch = ruleDayOfWeek === dayOfWeek;
+            const timeMatch = normalizedRuleTime === normalizedSlotTime;
+            // Check both 'mode' and 'consultation_mode' fields (backend inconsistency)
+            const ruleMode = rule.consultation_mode || rule.mode;
+            const modeMatch = ruleMode === slot.mode;
+
+            console.log("[DEBUG] Checking rule:", {
+              ruleId: rule.id,
+              ruleDayOfWeek: rule.day_of_week,
+              ruleDayOfWeekType: typeof rule.day_of_week,
+              ruleDayOfWeekNumber: ruleDayOfWeek,
+              slotDayOfWeek: dayOfWeek,
+              slotDayOfWeekType: typeof dayOfWeek,
+              ruleDayName: [
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+              ][ruleDayOfWeek],
+              ruleStartTime: rule.start_time,
+              normalizedRuleTime,
+              ruleMode: ruleMode,
+              ruleConsultationMode: rule.consultation_mode,
+              ruleModeField: rule.mode,
+              slotMode: slot.mode,
+              dayMatch,
+              timeMatch,
+              modeMatch,
+              allMatch: dayMatch && timeMatch && modeMatch,
+            });
+
+            return dayMatch && timeMatch && modeMatch;
+          });
+
+          if (!matchingRule) {
+            console.warn("[DEBUG] No matching rule found for slot:", {
+              slot,
+              dayOfWeek,
+              availableRules: availabilityRules.map((r) => ({
+                id: r.id,
+                day: r.day_of_week,
+                time: r.start_time,
+                mode: r.consultation_mode,
+              })),
+            });
+          }
+
           acc[date].push({
             id: slot.id || `${slot.date}-${slot.startTime}`,
+            ruleId: matchingRule?.id, // Attach rule ID for deletion
             startTime: slot.startTime,
             endTime: slot.endTime,
             available: slot.status === "available",
@@ -933,28 +1128,84 @@ const CliniciansPage: React.FC = () => {
     }
   };
 
-  // Delete a specific slot
-  const handleDeleteSlot = async (slotId: string) => {
+  // Initiate delete slot (show confirmation)
+  const handleInitiateDeleteSlot = (
+    ruleId: string,
+    date: string,
+    time: string,
+  ) => {
+    // No longer need ruleId check - we're creating exceptions now
+    setSlotToDelete({ ruleId, date, time });
+    setShowDeleteConfirm(true);
+  };
+
+  // Confirm and delete slot
+  const handleConfirmDeleteSlot = async () => {
+    if (!slotToDelete || !editingClinician) return;
+
     try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        toast.error("Authentication required. Please log in again.");
+        return;
+      }
+
+      // Extract slot details
+      const { date, time } = slotToDelete;
+
+      // Find the slot to get its details
+      const daySlots = clinicianSlots.find((ds) => ds.date === date);
+      const slot = daySlots?.slots.find((s: any) => s.startTime === time);
+
+      if (!slot) {
+        toast.error("Slot not found");
+        return;
+      }
+
+      // Create a slot exception instead of deleting the rule
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/booking/slots/${slotId}`,
+        `${import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api"}/users/clinicians/${editingClinician.id}/slot-exceptions`,
         {
-          method: "DELETE",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            centreId: parseInt(slot.centreId || formData.primaryCentreId),
+            exceptionDate: date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            mode: slot.mode,
+            reason: "Blocked by admin",
+          }),
         },
       );
 
       if (response.ok) {
-        toast.success("Slot deleted successfully");
-        // Refresh slots
-        if (selectedClinician) {
-          await fetchClinicianSlots(selectedClinician.id);
-        }
+        toast.success("Slot blocked successfully");
+
+        // Remove from UI immediately
+        setClinicianSlots((prevSlots) =>
+          prevSlots
+            .map((daySlots) => ({
+              ...daySlots,
+              slots: daySlots.slots.filter(
+                (s: any) => !(s.startTime === time && daySlots.date === date),
+              ),
+            }))
+            .filter((daySlots) => daySlots.slots.length > 0),
+        );
       } else {
-        toast.error("Failed to delete slot");
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to block slot");
       }
     } catch (error) {
-      console.error("Error deleting slot:", error);
-      toast.error("Failed to delete slot");
+      console.error("Error blocking slot:", error);
+      toast.error("Failed to block slot");
+    } finally {
+      setShowDeleteConfirm(false);
+      setSlotToDelete(null);
     }
   };
 
@@ -1687,7 +1938,13 @@ const CliniciansPage: React.FC = () => {
                               {slot.available && (
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteSlot(slot.id)}
+                                  onClick={() =>
+                                    handleInitiateDeleteSlot(
+                                      slot.ruleId,
+                                      daySlots.date,
+                                      slot.startTime,
+                                    )
+                                  }
                                   className="text-red-400 hover:text-red-300"
                                   title="Delete slot"
                                 >
@@ -1768,7 +2025,7 @@ const CliniciansPage: React.FC = () => {
               {editingClinician && clinicianSlots.length > 0 && (
                 <div className="mt-4 space-y-3">
                   <h4 className="text-sm font-medium text-slate-300">
-                    Existing Slots (Next 30 Days)
+                    Existing Availability Slots (Next 30 Days)
                   </h4>
                   {slotsLoading ? (
                     <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
@@ -1794,15 +2051,31 @@ const CliniciansPage: React.FC = () => {
                           {daySlots.slots.map((slot: any) => (
                             <div
                               key={slot.id}
-                              className={`px-3 py-1 rounded-md text-sm ${
+                              className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm ${
                                 slot.available
                                   ? "bg-green-600/20 text-green-300"
                                   : "bg-red-600/20 text-red-300"
                               }`}
                             >
-                              {slot.startTime} - {slot.endTime}
-                              {!slot.available && (
-                                <span className="ml-2">(Booked)</span>
+                              <span>
+                                {slot.startTime} - {slot.endTime}
+                                {!slot.available && " (Booked)"}
+                              </span>
+                              {slot.ruleId && slot.available && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleInitiateDeleteSlot(
+                                      slot.ruleId,
+                                      daySlots.date,
+                                      slot.startTime,
+                                    )
+                                  }
+                                  className="text-red-400 hover:text-red-300"
+                                  title="Delete this availability slot"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               )}
                             </div>
                           ))}
@@ -2395,6 +2668,64 @@ const CliniciansPage: React.FC = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setSlotToDelete(null);
+        }}
+        title="Confirm Deletion"
+        size="sm"
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-slate-300">
+            Are you sure you want to permanently delete this availability slot?
+          </p>
+          {slotToDelete && (
+            <div className="bg-slate-700/50 p-3 rounded-lg">
+              <div className="text-sm text-slate-400 mb-1">Date:</div>
+              <div className="text-white font-medium mb-2">
+                {new Date(slotToDelete.date + "T00:00:00").toLocaleDateString(
+                  "en-US",
+                  {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  },
+                )}
+              </div>
+              <div className="text-sm text-slate-400 mb-1">Time:</div>
+              <div className="text-white font-medium">{slotToDelete.time}</div>
+            </div>
+          )}
+          <p className="text-sm text-red-400">
+            This action cannot be undone. The slot will be permanently removed
+            from the database.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setSlotToDelete(null);
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmDeleteSlot}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Loading Overlay */}
