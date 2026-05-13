@@ -176,6 +176,14 @@ const CliniciansPage: React.FC = () => {
     time: string;
   } | null>(null);
 
+  // Delete by day modal state
+  const [showDeleteByDayModal, setShowDeleteByDayModal] = useState(false);
+  const [availabilityByDay, setAvailabilityByDay] = useState<{
+    [key: number]: any[];
+  }>({});
+  const [loadingByDay, setLoadingByDay] = useState(false);
+  const [deletingDay, setDeletingDay] = useState<number | null>(null);
+
   const [detailsFormData, setDetailsFormData] = useState({
     primaryCentreId: 0,
     specialization: [] as string[],
@@ -1185,17 +1193,8 @@ const CliniciansPage: React.FC = () => {
       if (response.ok) {
         toast.success("Slot blocked successfully");
 
-        // Remove from UI immediately
-        setClinicianSlots((prevSlots) =>
-          prevSlots
-            .map((daySlots) => ({
-              ...daySlots,
-              slots: daySlots.slots.filter(
-                (s: any) => !(s.startTime === time && daySlots.date === date),
-              ),
-            }))
-            .filter((daySlots) => daySlots.slots.length > 0),
-        );
+        // Refresh clinician slots from server to ensure UI is in sync
+        await fetchClinicianSlots(editingClinician.id);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || "Failed to block slot");
@@ -1236,6 +1235,119 @@ const CliniciansPage: React.FC = () => {
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Failed to update clinician");
+    }
+  };
+
+  // Open delete by day modal
+  const handleOpenDeleteByDayModal = async () => {
+    if (!editingClinician) return;
+
+    setShowDeleteByDayModal(true);
+    setLoadingByDay(true);
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        toast.error("Authentication required. Please log in again.");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api"}/users/clinicians/${editingClinician.id}/availability/by-day?centreId=${formData.primaryCentreId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailabilityByDay(data.data || {});
+      } else {
+        toast.error("Failed to load availability by day");
+      }
+    } catch (error) {
+      console.error("Error loading availability by day:", error);
+      toast.error("Failed to load availability by day");
+    } finally {
+      setLoadingByDay(false);
+    }
+  };
+
+  // Delete all slots for a specific day
+  const handleDeleteSlotsByDay = async (dayOfWeek: number) => {
+    if (!editingClinician) return;
+
+    const dayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ALL ${dayNames[dayOfWeek]} slots for this clinician?\n\nThis will remove all ${dayNames[dayOfWeek]} availability rules and cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    setDeletingDay(dayOfWeek);
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        toast.error("Authentication required. Please log in again.");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api"}/users/clinicians/${editingClinician.id}/availability/delete-by-day`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            dayOfWeek,
+            centreId: formData.primaryCentreId,
+          }),
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(
+          data.message || `Successfully deleted ${dayNames[dayOfWeek]} slots`,
+        );
+
+        // Remove from availabilityByDay state
+        setAvailabilityByDay((prev) => {
+          const updated = { ...prev };
+          delete updated[dayOfWeek];
+          return updated;
+        });
+
+        // Refresh clinician slots
+        await fetchClinicianSlots(editingClinician.id);
+
+        // Close modal if no more days
+        if (Object.keys(availabilityByDay).length <= 1) {
+          setShowDeleteByDayModal(false);
+        }
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to delete slots");
+      }
+    } catch (error) {
+      console.error("Error deleting slots by day:", error);
+      toast.error("Failed to delete slots");
+    } finally {
+      setDeletingDay(null);
     }
   };
 
@@ -1502,6 +1614,7 @@ const CliniciansPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={editingClinician ? "Edit Clinician" : "Add New Clinician"}
+        size="2xl"
         closeOnBackdropClick={false}
       >
         <form
@@ -1894,9 +2007,22 @@ const CliniciansPage: React.FC = () => {
             {/* Existing Slots Section - Only show in Edit mode */}
             {editingClinician && (
               <div className="space-y-4 bg-slate-700/30 p-4 rounded-lg">
-                <h3 className="text-sm font-semibold text-miboTeal">
-                  Existing Slots (Next 30 Days)
-                </h3>
+                {/* Delete Slots By Day Button */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-miboTeal">
+                    Existing Slots (Next 30 Days)
+                  </h3>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={handleOpenDeleteByDayModal}
+                    disabled={slotsLoading || clinicianSlots.length === 0}
+                  >
+                    <Trash2 size={14} className="mr-1" />
+                    Delete Slots By Day
+                  </Button>
+                </div>
                 {slotsLoading ? (
                   <div className="text-center py-4">
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-miboTeal"></div>
@@ -2723,6 +2849,116 @@ const CliniciansPage: React.FC = () => {
               className="flex-1 bg-red-600 hover:bg-red-700"
             >
               Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Slots By Day Modal */}
+      <Modal
+        isOpen={showDeleteByDayModal}
+        onClose={() => setShowDeleteByDayModal(false)}
+        title="Delete Slots By Day"
+        closeOnBackdropClick={false}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">
+            Select a day to delete all availability slots for that day. This
+            will remove all recurring slots for the selected day.
+          </p>
+
+          {loadingByDay ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-miboTeal"></div>
+              <p className="mt-2 text-sm text-slate-400">
+                Loading availability...
+              </p>
+            </div>
+          ) : Object.keys(availabilityByDay).length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              No availability rules found
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {Object.entries(availabilityByDay)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([dayOfWeek, rules]) => {
+                  const dayNames = [
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                  ];
+                  const dayName = dayNames[Number(dayOfWeek)];
+
+                  return (
+                    <div
+                      key={dayOfWeek}
+                      className="bg-slate-700/50 p-4 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-base font-semibold text-miboTeal">
+                          {dayName}
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="sm"
+                          onClick={() =>
+                            handleDeleteSlotsByDay(Number(dayOfWeek))
+                          }
+                          disabled={deletingDay !== null}
+                        >
+                          {deletingDay === Number(dayOfWeek) ? (
+                            <>
+                              <div className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 size={14} className="mr-1" />
+                              Delete All {dayName} Slots
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-400 mb-2">
+                          {rules.length} slot time(s):
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {rules.map((rule: any, index: number) => (
+                            <div
+                              key={index}
+                              className="bg-slate-600 px-3 py-1 rounded-md text-sm text-slate-200"
+                            >
+                              {rule.start_time.substring(0, 5)} -{" "}
+                              {rule.end_time.substring(0, 5)}
+                              <span className="ml-2 text-xs text-slate-400">
+                                ({rule.mode})
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4 border-t border-slate-600">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowDeleteByDayModal(false)}
+              disabled={deletingDay !== null}
+              className="flex-1"
+            >
+              Close
             </Button>
           </div>
         </div>

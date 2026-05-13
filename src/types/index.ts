@@ -104,6 +104,7 @@ export interface Patient {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   notes?: string;
+  mrn?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

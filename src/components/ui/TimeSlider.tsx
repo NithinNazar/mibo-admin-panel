@@ -126,14 +126,14 @@ export const TimeSlider: React.FC<TimeSliderProps> = ({
       {/* Minute Selection */}
       <div className="space-y-2">
         <label className="text-xs text-gray-600">Minutes</label>
-        <div className="grid grid-cols-4 gap-2">
-          {[0, 15, 30, 45].map((min) => (
+        <div className="grid grid-cols-6 gap-2">
+          {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((min) => (
             <button
               key={min}
               type="button"
               onClick={() => handleMinuteChange(min)}
               className={`
-                py-2 px-3 rounded-md text-sm font-medium transition-colors
+                py-2 px-2 rounded-md text-sm font-medium transition-colors
                 ${
                   minute === min
                     ? "bg-blue-600 text-white"

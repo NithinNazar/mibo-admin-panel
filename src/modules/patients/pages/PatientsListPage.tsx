@@ -52,7 +52,12 @@ const PatientsListPage: React.FC = () => {
     emergencyContactName: "",
     emergencyContactPhone: "",
     notes: "",
+    mrn: "",
   });
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<"name" | "mrn" | "centre" | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     fetchPatients();
@@ -103,6 +108,7 @@ const PatientsListPage: React.FC = () => {
         emergencyContactName: patient.emergencyContactName || "",
         emergencyContactPhone: patient.emergencyContactPhone || "",
         notes: patient.notes || "",
+        mrn: patient.mrn || "",
       });
     } else {
       setEditingPatient(null);
@@ -116,6 +122,7 @@ const PatientsListPage: React.FC = () => {
         emergencyContactName: "",
         emergencyContactPhone: "",
         notes: "",
+        mrn: "",
       });
     }
     setIsModalOpen(true);
@@ -156,6 +163,7 @@ const PatientsListPage: React.FC = () => {
   const handleExportCSV = () => {
     const csvData = filteredPatients.map((patient) => ({
       Name: patient.fullName,
+      MRN: patient.mrn || "Not Assigned",
       Phone: patient.phone,
       Email: patient.email || "N/A",
       Username: patient.username || "N/A",
@@ -175,6 +183,7 @@ const PatientsListPage: React.FC = () => {
   const handleExportPDF = () => {
     const headers = [
       "Name",
+      "MRN",
       "Phone",
       "Email",
       "Gender",
@@ -184,6 +193,7 @@ const PatientsListPage: React.FC = () => {
     ];
     const rows = filteredPatients.map((patient) => [
       patient.fullName,
+      patient.mrn || "Not Assigned",
       patient.phone,
       patient.email || "N/A",
       patient.gender || "N/A",
@@ -217,6 +227,51 @@ const PatientsListPage: React.FC = () => {
     printTable("Patients List", headers, rows);
   };
 
+  // Handle sorting
+  const handleSort = (field: "name" | "mrn" | "centre") => {
+    if (sortBy === field) {
+      // Toggle sort order
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  };
+
+  // Apply sorting to filtered patients
+  const sortedPatients = React.useMemo(() => {
+    if (!sortBy) return filteredPatients;
+
+    return [...filteredPatients].sort((a, b) => {
+      let aValue: string;
+      let bValue: string;
+
+      switch (sortBy) {
+        case "name":
+          aValue = a.fullName.toLowerCase();
+          bValue = b.fullName.toLowerCase();
+          break;
+        case "mrn":
+          aValue = a.mrn?.toLowerCase() || "";
+          bValue = b.mrn?.toLowerCase() || "";
+          break;
+        case "centre":
+          // Assuming centre info comes from upcoming appointments
+          aValue = a.upcomingAppointments?.[0]?.centreName?.toLowerCase() || "";
+          bValue = b.upcomingAppointments?.[0]?.centreName?.toLowerCase() || "";
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortOrder === "asc") {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
+    });
+  }, [filteredPatients, sortBy, sortOrder]);
+
   const columns = [
     {
       key: "name",
@@ -239,6 +294,17 @@ const PatientsListPage: React.FC = () => {
               <div className="text-xs text-slate-500">@{patient.username}</div>
             )}
           </div>
+        </div>
+      ),
+    },
+    {
+      key: "mrn",
+      header: "MRN",
+      render: (patient: Patient) => (
+        <div className="text-slate-300 text-sm font-mono">
+          {patient.mrn || (
+            <span className="text-slate-500 italic">Not Assigned</span>
+          )}
         </div>
       ),
     },
@@ -390,10 +456,10 @@ const PatientsListPage: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
               <Calendar size={24} className="text-green-400" />
             </div>
-            <div>
-              <div className="text-2xl font-bold text-white">
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl font-bold text-white truncate">
                 {patients.reduce(
-                  (sum, p) => sum + (p.upcomingAppointmentsCount || 0),
+                  (sum, p) => sum + Number(p.upcomingAppointmentsCount || 0),
                   0,
                 )}
               </div>
@@ -408,10 +474,10 @@ const PatientsListPage: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
               <Clock size={24} className="text-blue-400" />
             </div>
-            <div>
-              <div className="text-2xl font-bold text-white">
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl font-bold text-white truncate">
                 {patients.reduce(
-                  (sum, p) => sum + (p.pastAppointmentsCount || 0),
+                  (sum, p) => sum + Number(p.pastAppointmentsCount || 0),
                   0,
                 )}
               </div>
@@ -424,11 +490,12 @@ const PatientsListPage: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
               <User size={24} className="text-purple-400" />
             </div>
-            <div>
-              <div className="text-2xl font-bold text-white">
+            <div className="flex-1 min-w-0">
+              <div className="text-2xl font-bold text-white truncate">
                 {
-                  patients.filter((p) => (p.upcomingAppointmentsCount || 0) > 0)
-                    .length
+                  patients.filter(
+                    (p) => Number(p.upcomingAppointmentsCount || 0) > 0,
+                  ).length
                 }
               </div>
               <div className="text-sm text-slate-400">Active Patients</div>
@@ -451,6 +518,60 @@ const PatientsListPage: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-miboTeal"
           />
+        </div>
+      </Card>
+
+      {/* Sort Buttons */}
+      <Card>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-400">Sort by:</span>
+          <div className="flex gap-2">
+            <Button
+              variant={sortBy === "name" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => handleSort("name")}
+              className="flex items-center gap-1"
+            >
+              Name
+              {sortBy === "name" && (
+                <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
+              )}
+            </Button>
+            <Button
+              variant={sortBy === "mrn" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => handleSort("mrn")}
+              className="flex items-center gap-1"
+            >
+              MRN
+              {sortBy === "mrn" && (
+                <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
+              )}
+            </Button>
+            <Button
+              variant={sortBy === "centre" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => handleSort("centre")}
+              className="flex items-center gap-1"
+            >
+              Centre
+              {sortBy === "centre" && (
+                <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
+              )}
+            </Button>
+            {sortBy && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setSortBy(null);
+                  setSortOrder("asc");
+                }}
+              >
+                Clear Sort
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -502,11 +623,11 @@ const PatientsListPage: React.FC = () => {
         ) : (
           <>
             <div className="mb-4 text-sm text-slate-400">
-              Showing {filteredPatients.length} of {patients.length} patients
+              Showing {sortedPatients.length} of {patients.length} patients
             </div>
             <Table
               columns={columns}
-              data={filteredPatients}
+              data={sortedPatients}
               keyExtractor={(p) => p.userId}
             />
           </>
@@ -593,6 +714,14 @@ const PatientsListPage: React.FC = () => {
             onChange={(e) =>
               setFormData({ ...formData, bloodGroup: e.target.value })
             }
+          />
+
+          <Input
+            label="MRN (Medical Record Number)"
+            type="text"
+            placeholder="e.g., MRN-2024-00001"
+            value={formData.mrn}
+            onChange={(e) => setFormData({ ...formData, mrn: e.target.value })}
           />
 
           <div className="pt-4 border-t border-slate-700">

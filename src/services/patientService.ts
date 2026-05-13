@@ -15,6 +15,7 @@ export interface CreatePatientRequest {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   notes?: string;
+  mrn?: string;
 }
 
 export interface UpdatePatientRequest {
@@ -27,6 +28,7 @@ export interface UpdatePatientRequest {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   notes?: string;
+  mrn?: string;
 }
 
 export interface PatientDetailsResponse extends Patient {
@@ -61,7 +63,7 @@ class PatientService {
   // Update patient
   async updatePatient(
     id: string,
-    data: UpdatePatientRequest
+    data: UpdatePatientRequest,
   ): Promise<Patient> {
     const response = await api.put(`/patients/${id}`, data);
     return response.data.data || response.data;
@@ -76,7 +78,7 @@ class PatientService {
   // Add medical note to patient
   async addMedicalNote(
     patientId: string,
-    noteText: string
+    noteText: string,
   ): Promise<{ id: string; noteText: string; createdAt: Date }> {
     const response = await api.post(`/patients/${patientId}/notes`, {
       noteText,
