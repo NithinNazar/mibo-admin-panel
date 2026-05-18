@@ -5,8 +5,7 @@ export interface SelectOption {
   label: string;
 }
 
-export interface SelectProps
-  extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
   options: SelectOption[];
@@ -31,15 +30,28 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ${error ? "border-red-500 focus:ring-red-500" : "border-white/10"}
             ${className}
           `}
+          style={{
+            colorScheme: "dark",
+          }}
           {...props}
         >
           {placeholder && (
-            <option value="" disabled>
+            <option
+              value=""
+              disabled
+              className="bg-miboCardBg text-slate-100"
+              style={{ backgroundColor: "#1e293b", color: "#f1f5f9" }}
+            >
               {placeholder}
             </option>
           )}
           {options.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option
+              key={option.value}
+              value={option.value}
+              className="bg-miboCardBg text-slate-100"
+              style={{ backgroundColor: "#1e293b", color: "#f1f5f9" }}
+            >
               {option.label}
             </option>
           ))}
@@ -47,7 +59,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
       </div>
     );
-  }
+  },
 );
 
 Select.displayName = "Select";

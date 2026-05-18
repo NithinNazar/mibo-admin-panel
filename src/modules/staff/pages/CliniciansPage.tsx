@@ -185,6 +185,8 @@ const CliniciansPage: React.FC = () => {
   const [deletingDay, setDeletingDay] = useState<number | null>(null);
 
   const [detailsFormData, setDetailsFormData] = useState({
+    phone: "",
+    email: "",
     primaryCentreId: 0,
     specialization: [] as string[],
     registrationNumber: "",
@@ -323,8 +325,8 @@ const CliniciansPage: React.FC = () => {
         await fetchClinicianSlots(clinician.id);
         setFormData({
           full_name: "",
-          phone: "",
-          email: "",
+          phone: fullDetails.phone || "",
+          email: fullDetails.email || "",
           username: "",
           password: "",
           userId: parseInt(fullDetails.userId),
@@ -708,6 +710,8 @@ const CliniciansPage: React.FC = () => {
       if (editingClinician) {
         // Update existing clinician
         await clinicianService.updateClinician(editingClinician.id, {
+          phone: formData.phone,
+          email: formData.email,
           primaryCentreId: formData.primaryCentreId,
           specialization: formData.specialization,
           registrationNumber: formData.registrationNumber,
@@ -932,6 +936,8 @@ const CliniciansPage: React.FC = () => {
 
       // Initialize editable form data
       setDetailsFormData({
+        phone: details.phone || "",
+        email: details.email || "",
         primaryCentreId: parseInt(details.primaryCentreId),
         specialization: Array.isArray(details.specialization)
           ? details.specialization
@@ -1214,6 +1220,8 @@ const CliniciansPage: React.FC = () => {
     try {
       // Update clinician profile
       await clinicianService.updateClinician(selectedClinician.id, {
+        phone: detailsFormData.phone,
+        email: detailsFormData.email,
         primaryCentreId: detailsFormData.primaryCentreId,
         specialization: detailsFormData.specialization,
         registrationNumber: detailsFormData.registrationNumber,
@@ -1780,6 +1788,50 @@ const CliniciansPage: React.FC = () => {
 
             {editingClinician && (
               <>
+                {/* User Information Section for Editing */}
+                <div className="bg-slate-700/50 p-4 rounded-lg space-y-4 mb-4">
+                  <h3 className="text-sm font-semibold text-miboTeal mb-2">
+                    User Information
+                  </h3>
+                  <Input
+                    label="Phone Number"
+                    type="tel"
+                    placeholder="10-digit phone number"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        phone: e.target.value,
+                      });
+                      clearFieldError("phone");
+                    }}
+                    required
+                  />
+                  {validationErrors.phone && (
+                    <p className="text-xs text-red-500 -mt-2">
+                      {validationErrors.phone}
+                    </p>
+                  )}
+                  <Input
+                    label="Email (Optional)"
+                    type="email"
+                    placeholder="email@example.com"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        email: e.target.value,
+                      });
+                      clearFieldError("email");
+                    }}
+                  />
+                  {validationErrors.email && (
+                    <p className="text-xs text-red-500 -mt-2">
+                      {validationErrors.email}
+                    </p>
+                  )}
+                </div>
+
                 {/* Credentials Section for Editing Existing Clinicians */}
                 <div className="bg-slate-700/50 p-4 rounded-lg space-y-4 mb-4">
                   <h3 className="text-sm font-semibold text-miboTeal mb-2">
@@ -2350,6 +2402,26 @@ const CliniciansPage: React.FC = () => {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Phone Number
+                  </label>
+                  <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                    {selectedClinician.phone || "Not provided"}
+                  </div>
+                </div>
+
+                {selectedClinician.email && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Email
+                    </label>
+                    <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
+                      {selectedClinician.email}
+                    </div>
+                  </div>
+                )}
+
                 {/* Login Credentials Display */}
                 <div className="bg-slate-700/50 p-4 rounded-lg space-y-4">
                   <h3 className="text-sm font-semibold text-miboTeal mb-2">
@@ -2606,6 +2678,33 @@ const CliniciansPage: React.FC = () => {
                         ]
                   }
                   required
+                />
+
+                <Input
+                  label="Phone Number"
+                  type="tel"
+                  placeholder="10-digit phone number"
+                  value={detailsFormData.phone}
+                  onChange={(e) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      phone: e.target.value,
+                    })
+                  }
+                  required
+                />
+
+                <Input
+                  label="Email (Optional)"
+                  type="email"
+                  placeholder="Email address"
+                  value={detailsFormData.email}
+                  onChange={(e) =>
+                    setDetailsFormData({
+                      ...detailsFormData,
+                      email: e.target.value,
+                    })
+                  }
                 />
 
                 <MultiSelect

@@ -18,6 +18,8 @@ export interface CreateClinicianRequest {
 }
 
 export interface UpdateClinicianRequest {
+  phone?: string;
+  email?: string;
   primaryCentreId?: number;
   specialization?: string[];
   registrationNumber?: string;

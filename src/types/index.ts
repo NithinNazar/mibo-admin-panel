@@ -71,6 +71,7 @@ export interface Appointment {
   patient_id: string;
   patient_name: string;
   patient_phone: string;
+  patient_mrn?: string;
   clinician_id: string;
   clinician_name: string;
   centre_id: string;
@@ -82,6 +83,7 @@ export interface Appointment {
   duration_minutes: number;
   status: AppointmentStatus;
   notes?: string;
+  patient_notes?: string;
   booked_by_user_id: string;
   bookedByUserName: string;
   source: AppointmentSource;
@@ -130,6 +132,8 @@ export interface Clinician {
   userId: string;
   fullName?: string; // Backend returns fullName (camelCase)
   name: string; // Fallback for backward compatibility
+  phone?: string; // Clinician phone number
+  email?: string; // Clinician email
   specialization: string | string[]; // Support both for backward compatibility
   registrationNumber: string;
   yearsOfExperience: number;

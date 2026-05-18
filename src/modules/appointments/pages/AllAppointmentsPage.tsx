@@ -17,7 +17,8 @@ import {
 import toast from "react-hot-toast";
 import appointmentService from "../../../services/appointmentService";
 import centreService from "../../../services/centreService";
-import type { Appointment, Centre } from "../../../types";
+import clinicianService from "../../../services/clinicianService";
+import type { Appointment, Centre, Clinician } from "../../../types";
 import {
   exportToCSV,
   exportToPDF,
@@ -31,6 +32,7 @@ const AllAppointmentsPage: React.FC = () => {
   const { isClinician } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [centres, setCentres] = useState<Centre[]>([]);
+  const [clinicians, setClinicians] = useState<Clinician[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<
     Appointment[]
   >([]);
@@ -38,10 +40,17 @@ const AllAppointmentsPage: React.FC = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
+  const [mrnSearch, setMrnSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [centreFilter, setCentreFilter] = useState<string>("ALL");
+  const [clinicianFilter, setClinicianFilter] = useState<string>("ALL");
   const [timeFilter, setTimeFilter] = useState<string>("ALL");
   const [dateFilter, setDateFilter] = useState<string>("");
+
+  // Patient note modal state
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [selectedNoteAppointment, setSelectedNoteAppointment] =
+    useState<Appointment | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -52,8 +61,10 @@ const AllAppointmentsPage: React.FC = () => {
   }, [
     appointments,
     searchTerm,
+    mrnSearch,
     statusFilter,
     centreFilter,
+    clinicianFilter,
     timeFilter,
     dateFilter,
   ]);
@@ -61,12 +72,16 @@ const AllAppointmentsPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [appointmentsData, centresData] = await Promise.all([
-        appointmentService.getAllAppointments(),
-        centreService.getCentres(),
-      ]);
+      const [appointmentsData, centresData, cliniciansData] = await Promise.all(
+        [
+          appointmentService.getAllAppointments(),
+          centreService.getCentres(),
+          clinicianService.getClinicians(),
+        ],
+      );
       setAppointments(appointmentsData);
       setCentres(centresData);
+      setClinicians(cliniciansData);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to fetch data");
     } finally {
@@ -88,6 +103,14 @@ const AllAppointmentsPage: React.FC = () => {
       );
     }
 
+    // MRN search filter
+    if (mrnSearch) {
+      const search = mrnSearch.toLowerCase();
+      filtered = filtered.filter((apt) =>
+        apt.patient_mrn?.toLowerCase().includes(search),
+      );
+    }
+
     // Status filter
     if (statusFilter !== "ALL") {
       filtered = filtered.filter((apt) => apt.status === statusFilter);
@@ -96,6 +119,11 @@ const AllAppointmentsPage: React.FC = () => {
     // Centre filter
     if (centreFilter !== "ALL") {
       filtered = filtered.filter((apt) => apt.centre_id === centreFilter);
+    }
+
+    // Clinician filter
+    if (clinicianFilter !== "ALL") {
+      filtered = filtered.filter((apt) => apt.clinician_id === clinicianFilter);
     }
 
     // Time filter (current/past/upcoming)
@@ -135,6 +163,29 @@ const AllAppointmentsPage: React.FC = () => {
       });
     }
 
+    // Sort appointments: nearest upcoming first, then past appointments (most recent first)
+    const now = new Date();
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.scheduled_start_at);
+      const dateB = new Date(b.scheduled_start_at);
+
+      const isAUpcoming = dateA >= now;
+      const isBUpcoming = dateB >= now;
+
+      // Both upcoming: sort ascending (nearest first)
+      if (isAUpcoming && isBUpcoming) {
+        return dateA.getTime() - dateB.getTime();
+      }
+
+      // Both past: sort descending (most recent first)
+      if (!isAUpcoming && !isBUpcoming) {
+        return dateB.getTime() - dateA.getTime();
+      }
+
+      // One upcoming, one past: upcoming comes first
+      return isAUpcoming ? -1 : 1;
+    });
+
     setFilteredAppointments(filtered);
   };
 
@@ -173,6 +224,7 @@ const AllAppointmentsPage: React.FC = () => {
       "Appointment ID": apt.id,
       "Patient Name": apt.patient_name,
       "Patient Phone": apt.patient_phone,
+      MRN: apt.patient_mrn || "Not Assigned",
       Clinician: apt.clinician_name,
       Centre: apt.centre_name,
       Date: new Date(apt.scheduled_start_at).toLocaleDateString(),
@@ -193,6 +245,7 @@ const AllAppointmentsPage: React.FC = () => {
       "ID",
       "Patient",
       "Phone",
+      "MRN",
       "Clinician",
       "Centre",
       "Date",
@@ -204,6 +257,7 @@ const AllAppointmentsPage: React.FC = () => {
       apt.id,
       apt.patient_name,
       apt.patient_phone,
+      apt.patient_mrn || "Not Assigned",
       apt.clinician_name,
       apt.centre_name,
       new Date(apt.scheduled_start_at).toLocaleDateString(),
@@ -220,6 +274,7 @@ const AllAppointmentsPage: React.FC = () => {
       "ID",
       "Patient",
       "Phone",
+      "MRN",
       "Clinician",
       "Centre",
       "Date",
@@ -231,6 +286,7 @@ const AllAppointmentsPage: React.FC = () => {
       apt.id,
       apt.patient_name,
       apt.patient_phone,
+      apt.patient_mrn || "Not Assigned",
       apt.clinician_name,
       apt.centre_name,
       new Date(apt.scheduled_start_at).toLocaleDateString(),
@@ -274,6 +330,17 @@ const AllAppointmentsPage: React.FC = () => {
             {apt.patient_phone || "N/A"}
           </div>
         </div>
+      ),
+    },
+    {
+      key: "mrn",
+      header: "MRN",
+      render: (apt: Appointment) => (
+        <span className="text-slate-300 font-mono text-sm">
+          {apt.patient_mrn || (
+            <span className="text-slate-500 italic">Not Assigned</span>
+          )}
+        </span>
       ),
     },
     {
@@ -338,6 +405,30 @@ const AllAppointmentsPage: React.FC = () => {
       ),
     },
     {
+      key: "patient_notes",
+      header: "Patient Note",
+      render: (apt: Appointment) => (
+        <div>
+          {apt.patient_notes ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setSelectedNoteAppointment(apt);
+                setShowNoteModal(true);
+              }}
+              title="View patient note"
+            >
+              <FileText size={16} />
+              View Note
+            </Button>
+          ) : (
+            <span className="text-slate-500 italic text-sm">No note</span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: "actions",
       header: "Actions",
       render: (apt: Appointment) => (
@@ -388,7 +479,7 @@ const AllAppointmentsPage: React.FC = () => {
       <Card>
         <div className="space-y-4">
           {/* Search and Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div className="md:col-span-2">
               <div className="relative">
                 <Search
@@ -411,6 +502,22 @@ const AllAppointmentsPage: React.FC = () => {
               options={[
                 { value: "ALL", label: "All Centres" },
                 ...centres.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+            />
+
+            <Select
+              value={clinicianFilter}
+              onChange={(e) => setClinicianFilter(e.target.value)}
+              options={[
+                { value: "ALL", label: "All Clinicians" },
+                ...clinicians.map((clinician: any) => ({
+                  value: clinician.id,
+                  label:
+                    clinician.full_name ||
+                    clinician.fullName ||
+                    clinician.name ||
+                    "Unknown",
+                })),
               ]}
             />
 
@@ -441,7 +548,7 @@ const AllAppointmentsPage: React.FC = () => {
           </div>
 
           {/* Specific Date Filter */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div className="md:col-span-2">
               <Input
                 type="date"
@@ -457,6 +564,34 @@ const AllAppointmentsPage: React.FC = () => {
                 onClick={() => setDateFilter("")}
               >
                 Clear Date
+              </Button>
+            )}
+          </div>
+
+          {/* MRN Search Filter */}
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="md:col-span-2">
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                  size={20}
+                />
+                <Input
+                  type="text"
+                  placeholder="Search by MRN..."
+                  value={mrnSearch}
+                  onChange={(e) => setMrnSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            {mrnSearch && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setMrnSearch("")}
+              >
+                Clear MRN
               </Button>
             )}
           </div>
@@ -504,6 +639,91 @@ const AllAppointmentsPage: React.FC = () => {
           </>
         )}
       </Card>
+
+      {/* Patient Note Modal */}
+      {showNoteModal && selectedNoteAppointment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <FileText className="text-miboTeal" size={24} />
+                  Patient Note
+                </h2>
+                <p className="text-sm text-slate-400 mt-1">
+                  Appointment #{selectedNoteAppointment.id} •{" "}
+                  {selectedNoteAppointment.patient_name}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowNoteModal(false);
+                  setSelectedNoteAppointment(null);
+                }}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-white/10">
+                <p className="text-white whitespace-pre-wrap">
+                  {selectedNoteAppointment.patient_notes}
+                </p>
+              </div>
+
+              {/* Appointment Details */}
+              <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-400">Date & Time</p>
+                  <p className="text-white font-medium">
+                    {new Date(
+                      selectedNoteAppointment.scheduled_start_at,
+                    ).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Clinician</p>
+                  <p className="text-white font-medium">
+                    {selectedNoteAppointment.clinician_name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Type</p>
+                  <p className="text-white font-medium">
+                    {selectedNoteAppointment.appointment_type?.replace(
+                      "_",
+                      " ",
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Status</p>
+                  <p className="text-white font-medium">
+                    {selectedNoteAppointment.status}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t border-white/10">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowNoteModal(false);
+                  setSelectedNoteAppointment(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
