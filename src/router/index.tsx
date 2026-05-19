@@ -42,6 +42,9 @@ import SupportPage from "../modules/settings/pages/SupportPage";
 // Profile
 import ProfilePage from "../modules/profile/pages/ProfilePage";
 
+// Clinician Dashboard
+import ClinicianDashboardEnhanced from "../components/Clinician/ClinicianDashboardEnhanced";
+
 function AppRouter() {
   const { isAuthenticated, isLoading, isClinician } = useAuth();
 
@@ -94,21 +97,21 @@ function AppRouter() {
           isAuthenticated ? <AdminLayout /> : <Navigate to="/login" replace />
         }
       >
-        {/* Dashboard - Admin only */}
+        {/* Dashboard - Admin, Manager, Front Desk */}
         <Route
           path="dashboard"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <DashboardPage />
             </ProtectedRoute>
           }
         />
 
-        {/* Patients - Admin only */}
+        {/* Patients - Admin, Manager, Front Desk */}
         <Route
           path="patients"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <PatientsListPage />
             </ProtectedRoute>
           }
@@ -116,20 +119,29 @@ function AppRouter() {
         <Route
           path="patients/:id"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <PatientDetailsPage />
             </ProtectedRoute>
           }
         />
 
         {/* Appointments - All authenticated users */}
-        <Route path="appointments" element={<AllAppointmentsPage />} />
+        <Route
+          path="appointments"
+          element={
+            isClinician ? (
+              <ClinicianDashboardEnhanced />
+            ) : (
+              <AllAppointmentsPage />
+            )
+          }
+        />
 
-        {/* Appointment booking - Admin only */}
+        {/* Appointment booking - Admin, Manager, Front Desk */}
         <Route
           path="book-appointment"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <BookAppointmentPage />
             </ProtectedRoute>
           }
@@ -137,7 +149,7 @@ function AppRouter() {
         <Route
           path="front-desk-booking"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <FrontDeskBookingPage />
             </ProtectedRoute>
           }
@@ -145,7 +157,7 @@ function AppRouter() {
         <Route
           path="slot-blocking"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <SlotBlockingPage />
             </ProtectedRoute>
           }
@@ -153,7 +165,7 @@ function AppRouter() {
         <Route
           path="slot-blocking/by-centre"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <SlotBlockingByCentrePage />
             </ProtectedRoute>
           }
@@ -161,7 +173,7 @@ function AppRouter() {
         <Route
           path="slot-blocking/by-clinician"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <SlotBlockingByClinicianPage />
             </ProtectedRoute>
           }
@@ -169,17 +181,17 @@ function AppRouter() {
         <Route
           path="slot-blocking/by-date"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <SlotBlockingByDatePage />
             </ProtectedRoute>
           }
         />
 
-        {/* Centres - Admin only */}
+        {/* Centres - Admin, Manager, Front Desk */}
         <Route
           path="centres"
           element={
-            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "FRONT_DESK"]}>
               <CentresPage />
             </ProtectedRoute>
           }

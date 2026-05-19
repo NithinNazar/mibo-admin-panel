@@ -120,6 +120,12 @@ const Sidebar: React.FC = () => {
               path: "/book-appointment",
               icon: CalendarPlus,
             },
+            {
+              label: "Slot Management",
+              path: "/slot-blocking",
+              icon: CalendarX,
+            },
+            { label: "Centres", path: "/centres", icon: Building2 },
           ],
         },
         {

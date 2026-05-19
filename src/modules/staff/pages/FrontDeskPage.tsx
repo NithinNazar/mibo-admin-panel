@@ -15,6 +15,8 @@ import {
   FileText,
   Printer,
   User,
+  Edit,
+  Eye,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import centreService from "../../../services/centreService";
@@ -44,15 +46,27 @@ const FrontDeskPage: React.FC = () => {
   const [centres, setCentres] = useState<Centre[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<FrontDeskStaff | null>(
     null,
   );
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Form state
+  // Form state for create
   const [formData, setFormData] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    username: "",
+    password: "",
+    centreId: "",
+  });
+
+  // Form state for edit
+  const [editFormData, setEditFormData] = useState({
     full_name: "",
     phone: "",
     email: "",
@@ -186,6 +200,80 @@ const FrontDeskPage: React.FC = () => {
     }
   };
 
+  const handleEditStaff = async (staffMember: FrontDeskStaff) => {
+    try {
+      const details = await staffService.getStaffById(staffMember.id);
+      setSelectedStaff(details);
+      setEditFormData({
+        full_name: details.full_name || "",
+        phone: details.phone || "",
+        email: details.email || "",
+        username: details.username || "",
+        password: "", // Don't pre-fill password for security
+        centreId: details.centreId || "",
+      });
+      setShowEditModal(true);
+    } catch (error: any) {
+      toast.error("Failed to fetch staff details");
+    }
+  };
+
+  const handleUpdateStaff = async () => {
+    try {
+      if (!selectedStaff) return;
+
+      if (
+        !editFormData.full_name ||
+        !editFormData.phone ||
+        !editFormData.username ||
+        !editFormData.centreId
+      ) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      setIsUpdating(true);
+
+      // Prepare update payload
+      const updatePayload: any = {
+        full_name: editFormData.full_name,
+        phone: editFormData.phone,
+        email: editFormData.email || undefined,
+        username: editFormData.username,
+        centre_ids: [parseInt(editFormData.centreId)],
+      };
+
+      // Only include password if it's been changed
+      if (editFormData.password && editFormData.password.trim() !== "") {
+        updatePayload.password = editFormData.password;
+      }
+
+      await staffService.updateStaff(selectedStaff.id, updatePayload);
+      toast.success("Front desk staff updated successfully!");
+      setShowEditModal(false);
+      setSelectedStaff(null);
+      setEditFormData({
+        full_name: "",
+        phone: "",
+        email: "",
+        username: "",
+        password: "",
+        centreId: "",
+      });
+      fetchFrontDeskStaff();
+    } catch (error: any) {
+      console.error("Update error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error?.message ||
+        error.message ||
+        "Failed to update staff";
+      toast.error(errorMessage);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -249,13 +337,24 @@ const FrontDeskPage: React.FC = () => {
       key: "actions",
       header: "Actions",
       render: (item) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
             onClick={() => handleViewDetails(item)}
+            className="flex items-center gap-1"
           >
-            View Details
+            <Eye size={16} />
+            View
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => handleEditStaff(item)}
+            className="flex items-center gap-1"
+          >
+            <Edit size={16} />
+            Edit
           </Button>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -555,10 +654,139 @@ const FrontDeskPage: React.FC = () => {
         )}
       </Modal>
 
+      {/* Edit Staff Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedStaff(null);
+          setEditFormData({
+            full_name: "",
+            phone: "",
+            email: "",
+            username: "",
+            password: "",
+            centreId: "",
+          });
+        }}
+        title="Edit Front Desk Staff"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Full Name"
+            type="text"
+            placeholder="Enter full name"
+            value={editFormData.full_name}
+            onChange={(e) =>
+              setEditFormData({ ...editFormData, full_name: e.target.value })
+            }
+            required
+          />
+
+          <Input
+            label="Phone Number"
+            type="tel"
+            placeholder="10-digit phone number"
+            value={editFormData.phone}
+            onChange={(e) =>
+              setEditFormData({ ...editFormData, phone: e.target.value })
+            }
+            required
+          />
+
+          <Input
+            label="Email (Optional)"
+            type="email"
+            placeholder="email@example.com"
+            value={editFormData.email}
+            onChange={(e) =>
+              setEditFormData({ ...editFormData, email: e.target.value })
+            }
+          />
+
+          <Select
+            label="Assign to Centre"
+            value={editFormData.centreId}
+            onChange={(e) =>
+              setEditFormData({ ...editFormData, centreId: e.target.value })
+            }
+            options={[
+              { value: "", label: "Select Centre" },
+              ...centres.map((c) => ({
+                value: c.id,
+                label: `${c.name} - ${c.city}`,
+              })),
+            ]}
+            required
+          />
+
+          <Input
+            label="Username"
+            type="text"
+            placeholder="Enter username"
+            value={editFormData.username}
+            onChange={(e) =>
+              setEditFormData({ ...editFormData, username: e.target.value })
+            }
+            required
+          />
+
+          <Input
+            label="Password (Leave blank to keep current)"
+            type="password"
+            placeholder="Enter new password or leave blank"
+            value={editFormData.password}
+            onChange={(e) =>
+              setEditFormData({ ...editFormData, password: e.target.value })
+            }
+          />
+
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+            <p className="text-sm text-yellow-400">
+              <strong>Note:</strong> If you change the password, make sure to
+              inform the staff member of their new credentials.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowEditModal(false);
+                setSelectedStaff(null);
+                setEditFormData({
+                  full_name: "",
+                  phone: "",
+                  email: "",
+                  username: "",
+                  password: "",
+                  centreId: "",
+                });
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleUpdateStaff}
+              disabled={isUpdating}
+              className="flex-1"
+            >
+              {isUpdating ? "Updating..." : "Update Staff"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Loading Overlay */}
       <LoadingOverlay
-        isVisible={isCreating}
-        message="Creating front desk staff..."
+        isVisible={isCreating || isUpdating}
+        message={
+          isCreating
+            ? "Creating front desk staff..."
+            : "Updating front desk staff..."
+        }
         minDisplayTime={3000}
       />
     </div>
