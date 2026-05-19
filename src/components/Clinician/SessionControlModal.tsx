@@ -5,7 +5,7 @@ import { format } from "date-fns";
 
 interface SessionControlModalProps {
   appointment: {
-    id: number;
+    id: string;
     patient_name: string;
     scheduled_start_at: string;
     session_started_at?: string;
@@ -33,9 +33,9 @@ const SessionControlModal: React.FC<SessionControlModalProps> = ({
       setLoading(true);
       setError(null);
 
-      // Update appointment status to IN_PROGRESS
-      await appointmentService.updateAppointment(appointment.id.toString(), {
-        status: "IN_PROGRESS",
+      // Update appointment status to CONFIRMED (session in progress)
+      await appointmentService.updateAppointment(appointment.id, {
+        status: "CONFIRMED",
       });
 
       // Note: session_started_at will be set by backend automatically
@@ -53,7 +53,7 @@ const SessionControlModal: React.FC<SessionControlModalProps> = ({
       setError(null);
 
       // Update appointment status to COMPLETED
-      await appointmentService.updateAppointment(appointment.id.toString(), {
+      await appointmentService.updateAppointment(appointment.id, {
         status: "COMPLETED",
       });
 

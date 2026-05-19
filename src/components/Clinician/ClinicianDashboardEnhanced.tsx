@@ -27,8 +27,8 @@ import ClinicianNotesModal from "./ClinicianNotesModal";
 import SessionControlModal from "./SessionControlModal";
 
 interface AppointmentRow {
-  id: number;
-  patient_id: number;
+  id: string;
+  patient_id: string;
   patient_name: string;
   patient_phone: string;
   scheduled_start_at: string;
@@ -59,7 +59,7 @@ const ClinicianDashboardEnhanced: React.FC = () => {
   const [
     selectedAppointmentForPatientNotes,
     setSelectedAppointmentForPatientNotes,
-  ] = useState<number | null>(null);
+  ] = useState<string | null>(null);
   const [
     selectedAppointmentForClinicianNotes,
     setSelectedAppointmentForClinicianNotes,
@@ -94,9 +94,20 @@ const ClinicianDashboardEnhanced: React.FC = () => {
         ...(response.current || []),
         ...(response.upcoming || []),
         ...(response.past || []),
-      ];
+      ].map((apt) => ({
+        ...apt,
+        // Convert Date objects to ISO strings for consistency
+        scheduled_start_at:
+          apt.scheduled_start_at instanceof Date
+            ? apt.scheduled_start_at.toISOString()
+            : apt.scheduled_start_at,
+        scheduled_end_at:
+          apt.scheduled_end_at instanceof Date
+            ? apt.scheduled_end_at.toISOString()
+            : apt.scheduled_end_at,
+      }));
 
-      setAppointments(allAppointments);
+      setAppointments(allAppointments as AppointmentRow[]);
     } catch (error: any) {
       console.error("Failed to fetch appointments:", error);
       setError(

@@ -12,12 +12,12 @@ import { format } from "date-fns";
 
 interface ClinicianNotesModalProps {
   appointment: {
-    id: number;
+    id: string;
     patient_name: string;
     notes: string | null;
     scheduled_start_at: string;
   };
-  patientId: number;
+  patientId: string;
   onClose: () => void;
   onSave: () => void;
 }
@@ -53,7 +53,7 @@ const ClinicianNotesModal: React.FC<ClinicianNotesModalProps> = ({
       setLoadingPrevious(true);
       // Fetch all appointments for this patient
       const allAppointments = await appointmentService.getAppointments({
-        patientId: patientId.toString(),
+        patientId: patientId,
       });
 
       // Filter out current appointment and only include appointments with notes
@@ -91,7 +91,7 @@ const ClinicianNotesModal: React.FC<ClinicianNotesModalProps> = ({
       setLoading(true);
       setError(null);
 
-      await appointmentService.updateAppointment(appointment.id.toString(), {
+      await appointmentService.updateAppointment(appointment.id, {
         notes: notes.trim(),
       });
 

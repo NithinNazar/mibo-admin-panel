@@ -3,7 +3,7 @@ import { X, FileText } from "lucide-react";
 import appointmentService from "../../services/appointmentService";
 
 interface PatientNotesModalProps {
-  appointmentId: number;
+  appointmentId: string;
   onClose: () => void;
 }
 
@@ -23,9 +23,8 @@ const PatientNotesModal: React.FC<PatientNotesModalProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const appointment = await appointmentService.getAppointmentById(
-        appointmentId.toString(),
-      );
+      const appointment =
+        await appointmentService.getAppointmentById(appointmentId);
       setPatientNotes(
         appointment.patient_notes || "No notes provided by patient",
       );
