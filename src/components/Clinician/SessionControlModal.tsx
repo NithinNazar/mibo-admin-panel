@@ -33,9 +33,22 @@ const SessionControlModal: React.FC<SessionControlModalProps> = ({
       setLoading(true);
       setError(null);
 
-      // Update appointment status to CONFIRMED (session in progress)
+      // Check if current time is at or after scheduled time
+      const scheduledTime = new Date(appointment.scheduled_start_at);
+      const currentTime = new Date();
+
+      if (currentTime < scheduledTime) {
+        const formattedTime = format(scheduledTime, "hh:mm a, MMM dd, yyyy");
+        setError(
+          `Session can only be started at the scheduled time: ${formattedTime}`,
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Update appointment status to IN_PROGRESS (session in progress)
       await appointmentService.updateAppointment(appointment.id, {
-        status: "CONFIRMED",
+        status: "IN_PROGRESS",
       });
 
       // Note: session_started_at will be set by backend automatically

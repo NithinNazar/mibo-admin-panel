@@ -49,6 +49,7 @@ export interface Centre {
 export type AppointmentStatus =
   | "BOOKED"
   | "CONFIRMED"
+  | "IN_PROGRESS"
   | "RESCHEDULED"
   | "COMPLETED"
   | "CANCELLED"
