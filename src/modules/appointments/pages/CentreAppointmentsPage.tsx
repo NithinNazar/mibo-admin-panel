@@ -39,7 +39,7 @@ const CentreAppointmentsPage: React.FC = () => {
   const [selectedCentre, setSelectedCentre] = useState(centreId || "");
   const [selectedClinician, setSelectedClinician] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<AppointmentStatus | "">(
-    ""
+    "",
   );
   const [selectedDate, setSelectedDate] = useState("");
 
@@ -72,7 +72,7 @@ const CentreAppointmentsPage: React.FC = () => {
           appointmentService.getAppointments(),
           centreService.getCentres(),
           clinicianService.getClinicians(),
-        ]
+        ],
       );
       setAppointments(appointmentsData);
       setCentres(centresData);
@@ -93,7 +93,7 @@ const CentreAppointmentsPage: React.FC = () => {
 
     if (selectedClinician) {
       filtered = filtered.filter(
-        (apt) => apt.clinician_id === selectedClinician
+        (apt) => apt.clinician_id === selectedClinician,
       );
     }
 
@@ -134,7 +134,7 @@ const CentreAppointmentsPage: React.FC = () => {
         hour12: false,
         hour: "2-digit",
         minute: "2-digit",
-      })
+      }),
     );
   };
 
@@ -148,7 +148,7 @@ const CentreAppointmentsPage: React.FC = () => {
       const newStartTime = `${newDateTime}T${newTime}:00`;
       await appointmentService.rescheduleAppointment(
         reschedulingAppointment.id,
-        newStartTime
+        newStartTime,
       );
       toast.success("Appointment rescheduled successfully");
       setReschedulingAppointment(null);
@@ -162,6 +162,7 @@ const CentreAppointmentsPage: React.FC = () => {
     const statusConfig = {
       BOOKED: { variant: "info" as const, label: "Booked" },
       CONFIRMED: { variant: "success" as const, label: "Confirmed" },
+      IN_PROGRESS: { variant: "warning" as const, label: "In Progress" },
       RESCHEDULED: { variant: "warning" as const, label: "Rescheduled" },
       COMPLETED: { variant: "success" as const, label: "Completed" },
       CANCELLED: { variant: "danger" as const, label: "Cancelled" },
