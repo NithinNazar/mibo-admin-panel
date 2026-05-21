@@ -58,15 +58,18 @@ const Topbar: React.FC = () => {
           <Settings size={20} />
         </button>
 
-        {/* User Profile */}
+        {/* User Profile - Only show "Admin" badge for ADMIN role */}
         <div className="flex items-center gap-2 pl-3 border-l border-white/10">
           <div className="text-right text-xs hidden md:block">
             <div className="font-medium text-slate-100">
-              {user?.full_name || "Admin"}
+              {user?.full_name || "User"}
             </div>
-            <div className="text-[10px] text-slate-400">
-              {user?.roles?.[0]?.name || "Admin"}
-            </div>
+            {/* Only show role badge for ADMIN users */}
+            {user?.role === "ADMIN" && (
+              <div className="text-[10px] text-slate-400">
+                {user?.roles?.[0]?.name || "Admin"}
+              </div>
+            )}
           </div>
           <div className="h-9 w-9 rounded-full bg-gradient-to-br from-miboTeal to-miboDeepBlue flex items-center justify-center text-sm font-semibold cursor-pointer hover:ring-2 ring-miboTeal transition-all">
             {user?.full_name
@@ -74,7 +77,7 @@ const Topbar: React.FC = () => {
               .map((n) => n[0])
               .join("")
               .toUpperCase()
-              .slice(0, 2) || "AD"}
+              .slice(0, 2) || "U"}
           </div>
         </div>
 

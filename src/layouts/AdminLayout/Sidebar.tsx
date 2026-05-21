@@ -106,7 +106,7 @@ const Sidebar: React.FC = () => {
       ];
     }
 
-    // Front Desk sees appointments for booking
+    // Front Desk sees appointments for booking (NO Slot Management, NO Centres)
     if (user.role === "FRONT_DESK") {
       return [
         {
@@ -120,12 +120,6 @@ const Sidebar: React.FC = () => {
               path: "/book-appointment",
               icon: CalendarPlus,
             },
-            {
-              label: "Slot Management",
-              path: "/slot-blocking",
-              icon: CalendarX,
-            },
-            { label: "Centres", path: "/centres", icon: Building2 },
           ],
         },
         {

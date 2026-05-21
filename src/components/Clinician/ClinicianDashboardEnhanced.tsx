@@ -458,9 +458,20 @@ const ClinicianDashboardEnhanced: React.FC = () => {
                 {/* Patient Notes Button */}
                 <button
                   onClick={() =>
+                    appointment.patient_notes &&
                     setSelectedAppointmentForPatientNotes(appointment.id)
                   }
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  disabled={!appointment.patient_notes}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                    appointment.patient_notes
+                      ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-60"
+                  }`}
+                  title={
+                    appointment.patient_notes
+                      ? "View patient notes"
+                      : "No patient notes available"
+                  }
                 >
                   <FileText size={16} />
                   Patient Note

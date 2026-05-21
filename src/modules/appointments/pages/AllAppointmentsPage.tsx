@@ -29,7 +29,10 @@ import ClinicianDashboard from "../../../components/Clinician/ClinicianDashboard
 
 const AllAppointmentsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isClinician } = useAuth();
+  const { isClinician, user } = useAuth();
+  const isFrontDesk = user?.role === "FRONT_DESK";
+  const assignedCentreId = user?.assignedCentreId;
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [centres, setCentres] = useState<Centre[]>([]);
   const [clinicians, setClinicians] = useState<Clinician[]>([]);
@@ -55,6 +58,13 @@ const AllAppointmentsPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    // Auto-select assigned centre for front desk staff
+    if (isFrontDesk && assignedCentreId && centreFilter === "ALL") {
+      setCentreFilter(assignedCentreId);
+    }
+  }, [isFrontDesk, assignedCentreId, centres]);
 
   useEffect(() => {
     applyFilters();
@@ -499,6 +509,7 @@ const AllAppointmentsPage: React.FC = () => {
             <Select
               value={centreFilter}
               onChange={(e) => setCentreFilter(e.target.value)}
+              disabled={isFrontDesk} // Disable for front desk - they can only see their assigned centre
               options={[
                 { value: "ALL", label: "All Centres" },
                 ...centres.map((c) => ({ value: c.id, label: c.name })),

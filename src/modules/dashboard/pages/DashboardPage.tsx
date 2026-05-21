@@ -10,8 +10,12 @@ import toast from "react-hot-toast";
 import analyticsService from "../../../services/analyticsService";
 import appointmentService from "../../../services/appointmentService";
 import type { DashboardMetrics } from "../../../types";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
+  const isFrontDesk = user?.role === "FRONT_DESK";
+
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [topDoctorsData, setTopDoctorsData] = useState<any[]>([]);
   const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
@@ -130,25 +134,30 @@ const DashboardPage: React.FC = () => {
               : undefined,
           iconColor: "text-yellow-400",
         },
-        {
-          title: "Total Revenue",
-          value:
-            metrics.totalRevenue > 0
-              ? `₹${metrics.totalRevenue.toLocaleString()}`
-              : "-",
-          icon: IndianRupee,
-          trend:
-            metrics.totalRevenue > 0
-              ? {
-                  value: metrics.totalRevenueChange,
-                  direction: (metrics.totalRevenueChange >= 0
-                    ? "up"
-                    : "down") as "up" | "down",
-                  period: "this month",
-                }
-              : undefined,
-          iconColor: "text-green-400",
-        },
+        // Only show Total Revenue for non-front-desk users
+        ...(!isFrontDesk
+          ? [
+              {
+                title: "Total Revenue",
+                value:
+                  metrics.totalRevenue > 0
+                    ? `₹${metrics.totalRevenue.toLocaleString()}`
+                    : "-",
+                icon: IndianRupee,
+                trend:
+                  metrics.totalRevenue > 0
+                    ? {
+                        value: metrics.totalRevenueChange,
+                        direction: (metrics.totalRevenueChange >= 0
+                          ? "up"
+                          : "down") as "up" | "down",
+                        period: "this month",
+                      }
+                    : undefined,
+                iconColor: "text-green-400",
+              },
+            ]
+          : []),
       ]
     : [
         {
@@ -169,12 +178,17 @@ const DashboardPage: React.FC = () => {
           icon: Calendar,
           iconColor: "text-yellow-400",
         },
-        {
-          title: "Total Revenue",
-          value: "-",
-          icon: IndianRupee,
-          iconColor: "text-green-400",
-        },
+        // Only show Total Revenue for non-front-desk users
+        ...(!isFrontDesk
+          ? [
+              {
+                title: "Total Revenue",
+                value: "-",
+                icon: IndianRupee,
+                iconColor: "text-green-400",
+              },
+            ]
+          : []),
       ];
 
   if (loading) {
@@ -243,23 +257,24 @@ const DashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* Revenue Analytics */}
-      {revenueChartData.length > 0 ? (
-        <AreaChartComponent
-          data={revenueChartData}
-          title="Revenue Analytics"
-          color="#2CA5A9"
-        />
-      ) : (
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">
-            Revenue Analytics
-          </h3>
-          <div className="flex items-center justify-center h-64 text-slate-400">
-            No revenue data available
-          </div>
-        </Card>
-      )}
+      {/* Revenue Analytics - Hidden for Front Desk */}
+      {!isFrontDesk &&
+        (revenueChartData.length > 0 ? (
+          <AreaChartComponent
+            data={revenueChartData}
+            title="Revenue Analytics"
+            color="#2CA5A9"
+          />
+        ) : (
+          <Card>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Revenue Analytics
+            </h3>
+            <div className="flex items-center justify-center h-64 text-slate-400">
+              No revenue data available
+            </div>
+          </Card>
+        ))}
 
       {/* Recent Activity */}
       <Card>
