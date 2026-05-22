@@ -74,9 +74,35 @@ const CentreAppointmentsPage: React.FC = () => {
           clinicianService.getClinicians(),
         ],
       );
-      setAppointments(appointmentsData);
-      setCentres(centresData);
-      setClinicians(cliniciansData);
+
+      // Filter data for front desk staff based on their assigned centre
+      const isFrontDesk = user?.role === "FRONT_DESK";
+      const assignedCentreId = user?.assignedCentreId;
+
+      if (isFrontDesk && assignedCentreId) {
+        // Filter appointments to only show those from assigned centre
+        const filteredAppointments = appointmentsData.filter(
+          (apt) => apt.centre_id === assignedCentreId,
+        );
+        setAppointments(filteredAppointments);
+
+        // Filter centres to only show assigned centre
+        const filteredCentres = centresData.filter(
+          (centre) => centre.id === assignedCentreId,
+        );
+        setCentres(filteredCentres);
+
+        // Filter clinicians to only show those from assigned centre
+        const filteredClinicians = cliniciansData.filter(
+          (clinician) => clinician.primaryCentreId === assignedCentreId,
+        );
+        setClinicians(filteredClinicians);
+      } else {
+        // For admin and managers, show all data
+        setAppointments(appointmentsData);
+        setCentres(centresData);
+        setClinicians(cliniciansData);
+      }
     } catch (error: any) {
       toast.error("Failed to fetch data");
     } finally {

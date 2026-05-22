@@ -18,6 +18,7 @@ import centreService from "../../../services/centreService";
 import clinicianService from "../../../services/clinicianService";
 import patientService from "../../../services/patientService";
 import appointmentService from "../../../services/appointmentService";
+import { useAuth } from "../../../contexts/AuthContext";
 import type {
   Centre,
   Clinician,
@@ -29,6 +30,10 @@ import type {
 type BookingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 const BookAppointmentPage: React.FC = () => {
+  const { user } = useAuth();
+  const isFrontDesk = user?.role === "FRONT_DESK";
+  const assignedCentreId = user?.assignedCentreId;
+
   const [currentStep, setCurrentStep] = useState<BookingStep>(1);
   const [loading, setLoading] = useState(false);
 
@@ -72,7 +77,20 @@ const BookAppointmentPage: React.FC = () => {
   const fetchCentres = async () => {
     try {
       const data = await centreService.getCentres();
-      setCentres(data);
+
+      // Filter centres for front desk staff
+      if (isFrontDesk && assignedCentreId) {
+        // Convert to string for type consistency
+        const centreIdStr = String(assignedCentreId);
+        const filteredCentres = data.filter(
+          (centre) => String(centre.id) === centreIdStr,
+        );
+        setCentres(filteredCentres);
+        // Auto-select the assigned centre for front desk staff
+        setSelectedCentre(centreIdStr);
+      } else {
+        setCentres(data);
+      }
     } catch (error: any) {
       toast.error("Failed to fetch centres");
     }
@@ -299,32 +317,49 @@ const BookAppointmentPage: React.FC = () => {
         {currentStep === 1 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-white">Select Centre</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {centres.map((centre) => (
-                <button
-                  key={centre.id}
-                  onClick={() => setSelectedCentre(centre.id)}
-                  className={`
-                    p-4 rounded-lg border-2 text-left transition-all
-                    ${
-                      selectedCentre === centre.id
-                        ? "border-miboTeal bg-miboTeal/10"
-                        : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
-                    }
-                  `}
-                >
-                  <div className="font-medium text-white mb-1">
-                    {centre.name}
-                  </div>
-                  <div className="text-sm text-slate-400 capitalize">
-                    {centre.city}
-                  </div>
-                  <div className="text-sm text-slate-400 mt-2">
-                    {centre.address}
-                  </div>
-                </button>
-              ))}
-            </div>
+            {isFrontDesk && assignedCentreId ? (
+              <div className="p-4 rounded-lg border-2 border-miboTeal bg-miboTeal/10">
+                <div className="font-medium text-white mb-1">
+                  {centres.find((c) => c.id === assignedCentreId)?.name}
+                </div>
+                <div className="text-sm text-slate-400 capitalize">
+                  {centres.find((c) => c.id === assignedCentreId)?.city}
+                </div>
+                <div className="text-sm text-slate-400 mt-2">
+                  {centres.find((c) => c.id === assignedCentreId)?.address}
+                </div>
+                <div className="text-xs text-miboTeal mt-3">
+                  ✓ Your assigned centre (automatically selected)
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {centres.map((centre) => (
+                  <button
+                    key={centre.id}
+                    onClick={() => setSelectedCentre(centre.id)}
+                    className={`
+                      p-4 rounded-lg border-2 text-left transition-all
+                      ${
+                        selectedCentre === centre.id
+                          ? "border-miboTeal bg-miboTeal/10"
+                          : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
+                      }
+                    `}
+                  >
+                    <div className="font-medium text-white mb-1">
+                      {centre.name}
+                    </div>
+                    <div className="text-sm text-slate-400 capitalize">
+                      {centre.city}
+                    </div>
+                    <div className="text-sm text-slate-400 mt-2">
+                      {centre.address}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -41,11 +41,13 @@ const AllAppointmentsPage: React.FC = () => {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Filters - Initialize centreFilter based on user role
   const [searchTerm, setSearchTerm] = useState("");
   const [mrnSearch, setMrnSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [centreFilter, setCentreFilter] = useState<string>("ALL");
+  const [centreFilter, setCentreFilter] = useState<string>(
+    isFrontDesk && assignedCentreId ? assignedCentreId : "ALL",
+  );
   const [clinicianFilter, setClinicianFilter] = useState<string>("ALL");
   const [timeFilter, setTimeFilter] = useState<string>("ALL");
   const [dateFilter, setDateFilter] = useState<string>("");
@@ -61,10 +63,10 @@ const AllAppointmentsPage: React.FC = () => {
 
   useEffect(() => {
     // Auto-select assigned centre for front desk staff
-    if (isFrontDesk && assignedCentreId && centreFilter === "ALL") {
+    if (isFrontDesk && assignedCentreId && centreFilter !== assignedCentreId) {
       setCentreFilter(assignedCentreId);
     }
-  }, [isFrontDesk, assignedCentreId, centres]);
+  }, [isFrontDesk, assignedCentreId]);
 
   useEffect(() => {
     applyFilters();
@@ -89,9 +91,35 @@ const AllAppointmentsPage: React.FC = () => {
           clinicianService.getClinicians(),
         ],
       );
-      setAppointments(appointmentsData);
-      setCentres(centresData);
-      setClinicians(cliniciansData);
+
+      // Filter data for front desk staff based on their assigned centre
+      if (isFrontDesk && assignedCentreId) {
+        // Convert assignedCentreId to string to ensure type consistency
+        const centreIdStr = String(assignedCentreId);
+
+        // Filter appointments to only show those from assigned centre
+        const filteredAppointments = appointmentsData.filter(
+          (apt) => String(apt.centre_id) === centreIdStr,
+        );
+        setAppointments(filteredAppointments);
+
+        // Filter centres to only show assigned centre
+        const filteredCentres = centresData.filter(
+          (centre) => String(centre.id) === centreIdStr,
+        );
+        setCentres(filteredCentres);
+
+        // Filter clinicians to only show those from assigned centre
+        const filteredClinicians = cliniciansData.filter(
+          (clinician) => String(clinician.primaryCentreId) === centreIdStr,
+        );
+        setClinicians(filteredClinicians);
+      } else {
+        // For admin and managers, show all data
+        setAppointments(appointmentsData);
+        setCentres(centresData);
+        setClinicians(cliniciansData);
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to fetch data");
     } finally {
@@ -474,9 +502,13 @@ const AllAppointmentsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white">All Appointments</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {isFrontDesk ? "Centre Appointments" : "All Appointments"}
+          </h1>
           <p className="text-slate-400 mt-1">
-            View and manage all bookings across centres
+            {isFrontDesk
+              ? `View and manage bookings for ${centres.find((c) => c.id === assignedCentreId)?.name || "your centre"}`
+              : "View and manage all bookings across centres"}
           </p>
         </div>
         <Button variant="primary" onClick={() => navigate("/book-appointment")}>
@@ -510,10 +542,16 @@ const AllAppointmentsPage: React.FC = () => {
               value={centreFilter}
               onChange={(e) => setCentreFilter(e.target.value)}
               disabled={isFrontDesk} // Disable for front desk - they can only see their assigned centre
-              options={[
-                { value: "ALL", label: "All Centres" },
-                ...centres.map((c) => ({ value: c.id, label: c.name })),
-              ]}
+              options={
+                isFrontDesk && assignedCentreId
+                  ? // For front desk, only show their assigned centre
+                    centres.map((c) => ({ value: c.id, label: c.name }))
+                  : // For admin/managers, show all centres with "All Centres" option
+                    [
+                      { value: "ALL", label: "All Centres" },
+                      ...centres.map((c) => ({ value: c.id, label: c.name })),
+                    ]
+              }
             />
 
             <Select

@@ -89,8 +89,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           break;
       }
 
+      // Log user data for debugging
+      console.log("=== LOGIN RESPONSE DEBUG ===");
+      console.log(
+        "[AuthContext] Login successful, full response:",
+        JSON.stringify(response, null, 2),
+      );
+      console.log(
+        "[AuthContext] User data:",
+        JSON.stringify(response.user, null, 2),
+      );
+      console.log("[AuthContext] User role:", response.user.role);
+      console.log(
+        "[AuthContext] Assigned centre ID:",
+        response.user.assignedCentreId,
+      );
+      console.log(
+        "[AuthContext] Assigned centre ID type:",
+        typeof response.user.assignedCentreId,
+      );
+      console.log("[AuthContext] Centre IDs:", response.user.centreIds);
+      console.log("============================");
+
+      // Log user data for debugging
+      console.log("=== LOGIN RESPONSE DEBUG ===");
+      console.log(
+        "[AuthContext] Login successful, full response:",
+        JSON.stringify(response, null, 2),
+      );
+      console.log(
+        "[AuthContext] User data:",
+        JSON.stringify(response.user, null, 2),
+      );
+      console.log("[AuthContext] User role:", response.user.role);
+      console.log(
+        "[AuthContext] Assigned centre ID:",
+        response.user.assignedCentreId,
+      );
+      console.log(
+        "[AuthContext] Assigned centre ID type:",
+        typeof response.user.assignedCentreId,
+      );
+      console.log("[AuthContext] Centre IDs:", response.user.centreIds);
+      console.log("============================");
+
       // Update user state immediately after successful login
       setUser(response.user);
+
+      // Log for debugging
+      console.log("Login successful, user set:", response.user);
 
       // Log for debugging
       console.log("Login successful, user set:", response.user);

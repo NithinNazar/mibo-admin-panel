@@ -145,6 +145,7 @@ const CliniciansPage: React.FC = () => {
   // Filter and search state
   const [selectedCentreFilter, setSelectedCentreFilter] =
     useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active"); // New: Status filter (default: active)
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
 
@@ -268,7 +269,7 @@ const CliniciansPage: React.FC = () => {
     }
   };
 
-  // Filter clinicians based on selected centre and search query
+  // Filter clinicians based on selected centre, status, and search query
   const filteredClinicians = React.useMemo(() => {
     let filtered = clinicians;
 
@@ -279,6 +280,14 @@ const CliniciansPage: React.FC = () => {
       );
     }
 
+    // Filter by status
+    if (statusFilter === "active") {
+      filtered = filtered.filter((clinician) => clinician.isActive === true);
+    } else if (statusFilter === "inactive") {
+      filtered = filtered.filter((clinician) => clinician.isActive === false);
+    }
+    // If statusFilter === "all", show all clinicians (no filtering)
+
     // Filter by search query
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
@@ -288,7 +297,7 @@ const CliniciansPage: React.FC = () => {
     }
 
     return filtered;
-  }, [clinicians, selectedCentreFilter, searchQuery]);
+  }, [clinicians, selectedCentreFilter, statusFilter, searchQuery]);
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1523,6 +1532,22 @@ const CliniciansPage: React.FC = () => {
             />
           </div>
 
+          {/* Status Filter */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Filter by Status
+            </label>
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+                { value: "all", label: "All" },
+              ]}
+            />
+          </div>
+
           {/* Search by Name */}
           <div className="flex-1 relative search-dropdown-container">
             <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -1583,11 +1608,14 @@ const CliniciansPage: React.FC = () => {
           </div>
 
           {/* Clear Filters Button */}
-          {(selectedCentreFilter !== "all" || searchQuery) && (
+          {(selectedCentreFilter !== "all" ||
+            statusFilter !== "active" ||
+            searchQuery) && (
             <Button
               variant="secondary"
               onClick={() => {
                 setSelectedCentreFilter("all");
+                setStatusFilter("active");
                 handleClearSearch();
               }}
             >
