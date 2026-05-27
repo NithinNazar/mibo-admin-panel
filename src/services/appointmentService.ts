@@ -17,6 +17,7 @@ export interface CreateAppointmentRequest {
   scheduled_start_at: string; // ISO 8601 format
   duration_minutes: number;
   notes?: string;
+  patient_notes?: string; // Patient notes entered during booking
 }
 
 export interface UpdateAppointmentRequest {

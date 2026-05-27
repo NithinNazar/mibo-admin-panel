@@ -55,7 +55,7 @@ const BookAppointmentPage: React.FC = () => {
     phone: "",
     email: "",
   });
-  const [notes, setNotes] = useState("");
+  const [patientNotes, setPatientNotes] = useState(""); // Patient notes for booking
 
   useEffect(() => {
     fetchCentres();
@@ -214,7 +214,7 @@ const BookAppointmentPage: React.FC = () => {
           parseInt(selectedSlot.endTime.split(":")[1]) -
           (parseInt(selectedSlot.startTime.split(":")[0]) * 60 +
             parseInt(selectedSlot.startTime.split(":")[1])),
-        notes,
+        patient_notes: patientNotes, // Use patient_notes field instead of notes
       });
 
       toast.success("Appointment booked successfully!");
@@ -228,7 +228,7 @@ const BookAppointmentPage: React.FC = () => {
       setSessionType("IN_PERSON");
       setSelectedPatient("");
       setNewPatient({ fullName: "", phone: "", email: "" });
-      setNotes("");
+      setPatientNotes(""); // Reset patient notes
     } catch (error: any) {
       toast.error(
         error.response?.data?.message || "Failed to book appointment",
@@ -580,15 +580,20 @@ const BookAppointmentPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Notes (Optional)
+                Patient Notes (Optional)
               </label>
               <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any additional notes..."
+                value={patientNotes}
+                onChange={(e) => setPatientNotes(e.target.value)}
+                placeholder="Add any notes about the patient's needs, conditions, or special requirements..."
                 rows={3}
+                maxLength={500}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-miboTeal"
               />
+              <p className="text-xs text-slate-400 mt-1">
+                These notes will be visible to the clinician before the
+                appointment ({patientNotes.length}/500)
+              </p>
             </div>
           </div>
         )}

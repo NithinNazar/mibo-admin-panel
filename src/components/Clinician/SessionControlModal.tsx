@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, Play, Square, Clock, AlertCircle } from "lucide-react";
 import appointmentService from "../../services/appointmentService";
 import { format } from "date-fns";
+import { parseUTCDate } from "../../utils/dateUtils";
 
 interface SessionControlModalProps {
   appointment: {
@@ -34,7 +35,8 @@ const SessionControlModal: React.FC<SessionControlModalProps> = ({
       setError(null);
 
       // Check if current time is at or after scheduled time
-      const scheduledTime = new Date(appointment.scheduled_start_at);
+      // Use parseUTCDate to ensure proper timezone handling
+      const scheduledTime = parseUTCDate(appointment.scheduled_start_at);
       const currentTime = new Date();
 
       if (currentTime < scheduledTime) {
@@ -128,7 +130,10 @@ const SessionControlModal: React.FC<SessionControlModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-400">Scheduled Time</span>
               <span className="text-sm text-white font-medium">
-                {format(new Date(appointment.scheduled_start_at), "hh:mm a")}
+                {format(
+                  parseUTCDate(appointment.scheduled_start_at),
+                  "hh:mm a",
+                )}
               </span>
             </div>
 
@@ -136,7 +141,10 @@ const SessionControlModal: React.FC<SessionControlModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-400">Session Started</span>
                 <span className="text-sm text-white font-medium">
-                  {format(new Date(appointment.session_started_at), "hh:mm a")}
+                  {format(
+                    parseUTCDate(appointment.session_started_at),
+                    "hh:mm a",
+                  )}
                 </span>
               </div>
             )}
@@ -145,7 +153,10 @@ const SessionControlModal: React.FC<SessionControlModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-400">Session Ended</span>
                 <span className="text-sm text-white font-medium">
-                  {format(new Date(appointment.session_ended_at), "hh:mm a")}
+                  {format(
+                    parseUTCDate(appointment.session_ended_at),
+                    "hh:mm a",
+                  )}
                 </span>
               </div>
             )}

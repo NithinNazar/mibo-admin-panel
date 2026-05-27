@@ -25,6 +25,7 @@ import {
 import PatientNotesModal from "./PatientNotesModal";
 import ClinicianNotesModal from "./ClinicianNotesModal";
 import SessionControlModal from "./SessionControlModal";
+import { parseUTCDate } from "../../utils/dateUtils";
 
 interface AppointmentRow {
   id: string;
@@ -126,7 +127,7 @@ const ClinicianDashboardEnhanced: React.FC = () => {
     // Filter by view mode (upcoming vs past)
     if (viewMode === "upcoming") {
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at);
+        const aptDate = parseUTCDate(apt.scheduled_start_at);
         return (
           isAfter(aptDate, now) ||
           format(aptDate, "yyyy-MM-dd") === format(now, "yyyy-MM-dd")
@@ -134,7 +135,7 @@ const ClinicianDashboardEnhanced: React.FC = () => {
       });
     } else {
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at);
+        const aptDate = parseUTCDate(apt.scheduled_start_at);
         return isBefore(aptDate, startOfDay(now));
       });
     }
@@ -143,28 +144,28 @@ const ClinicianDashboardEnhanced: React.FC = () => {
     if (dateRange === "next30" && viewMode === "upcoming") {
       const next30Days = addDays(now, 30);
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at);
+        const aptDate = parseUTCDate(apt.scheduled_start_at);
         return isBefore(aptDate, next30Days);
       });
     } else if (dateRange === "past20" && viewMode === "past") {
       const past20Days = subDays(now, 20);
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at);
+        const aptDate = parseUTCDate(apt.scheduled_start_at);
         return isAfter(aptDate, past20Days);
       });
     } else if (dateRange === "custom" && customStartDate && customEndDate) {
       const start = new Date(customStartDate);
       const end = new Date(customEndDate);
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at);
+        const aptDate = parseUTCDate(apt.scheduled_start_at);
         return isAfter(aptDate, start) && isBefore(aptDate, end);
       });
     }
 
     // Sort: nearest upcoming first for upcoming, most recent first for past
     filtered.sort((a, b) => {
-      const dateA = new Date(a.scheduled_start_at).getTime();
-      const dateB = new Date(b.scheduled_start_at).getTime();
+      const dateA = parseUTCDate(a.scheduled_start_at).getTime();
+      const dateB = parseUTCDate(b.scheduled_start_at).getTime();
       return viewMode === "upcoming" ? dateA - dateB : dateB - dateA;
     });
 
@@ -407,7 +408,7 @@ const ClinicianDashboardEnhanced: React.FC = () => {
                   <Calendar size={16} className="text-slate-500" />
                   <span className="text-sm">
                     {format(
-                      new Date(appointment.scheduled_start_at),
+                      parseUTCDate(appointment.scheduled_start_at),
                       "MMM dd, yyyy",
                     )}
                   </span>
@@ -416,11 +417,14 @@ const ClinicianDashboardEnhanced: React.FC = () => {
                   <Clock size={16} className="text-slate-500" />
                   <span className="text-sm">
                     {format(
-                      new Date(appointment.scheduled_start_at),
+                      parseUTCDate(appointment.scheduled_start_at),
                       "hh:mm a",
                     )}{" "}
                     -{" "}
-                    {format(new Date(appointment.scheduled_end_at), "hh:mm a")}
+                    {format(
+                      parseUTCDate(appointment.scheduled_end_at),
+                      "hh:mm a",
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">

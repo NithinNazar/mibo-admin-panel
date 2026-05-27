@@ -58,16 +58,28 @@ const Topbar: React.FC = () => {
           <Settings size={20} />
         </button>
 
-        {/* User Profile - Only show "Admin" badge for ADMIN role */}
+        {/* User Profile */}
         <div className="flex items-center gap-2 pl-3 border-l border-white/10">
           <div className="text-right text-xs hidden md:block">
             <div className="font-medium text-slate-100">
-              {user?.full_name || "User"}
+              {user?.full_name || user?.name || "User"}
             </div>
-            {/* Only show role badge for ADMIN users */}
-            {user?.role === "ADMIN" && (
+            {/* Show role badge for all users */}
+            {user?.role && (
               <div className="text-[10px] text-slate-400">
-                {user?.roles?.[0]?.name || "Admin"}
+                {user.role === "ADMIN"
+                  ? "Admin"
+                  : user.role === "MANAGER"
+                    ? "Manager"
+                    : user.role === "CENTRE_MANAGER"
+                      ? "Centre Manager"
+                      : user.role === "CLINICIAN"
+                        ? "Clinician"
+                        : user.role === "CARE_COORDINATOR"
+                          ? "Care Coordinator"
+                          : user.role === "FRONT_DESK"
+                            ? "Front Desk"
+                            : user.role}
               </div>
             )}
           </div>
@@ -77,7 +89,14 @@ const Topbar: React.FC = () => {
               .map((n) => n[0])
               .join("")
               .toUpperCase()
-              .slice(0, 2) || "U"}
+              .slice(0, 2) ||
+              user?.name
+                ?.split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2) ||
+              "U"}
           </div>
         </div>
 
