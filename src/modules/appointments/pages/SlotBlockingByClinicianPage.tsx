@@ -9,6 +9,7 @@ import { CalendarOff, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import clinicianService from "../../../services/clinicianService";
 import { slotBlockingService } from "../../../services/slotBlockingService";
+import { formatTimeSlot } from "../../../utils/slotGenerator";
 import type { Clinician, TimeSlot } from "../../../types";
 
 const SlotBlockingByClinicianPage: React.FC = () => {
@@ -66,7 +67,9 @@ const SlotBlockingByClinicianPage: React.FC = () => {
       toast.success("Slot blocked successfully");
       fetchSlots();
     } catch (error) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
+      const err = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
       toast.error(err.response?.data?.error?.message || "Failed to block slot");
     }
   };
@@ -78,8 +81,12 @@ const SlotBlockingByClinicianPage: React.FC = () => {
       toast.success("Slot unblocked successfully");
       fetchSlots();
     } catch (error) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
-      toast.error(err.response?.data?.error?.message || "Failed to unblock slot");
+      const err = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
+      toast.error(
+        err.response?.data?.error?.message || "Failed to unblock slot",
+      );
     }
   };
 
@@ -95,9 +102,8 @@ const SlotBlockingByClinicianPage: React.FC = () => {
       key: "time",
       header: "Time",
       render: (slot: TimeSlot) => (
-        <div>
-          <div className="text-white">{slot.startTime}</div>
-          <div className="text-sm text-slate-400">to {slot.endTime}</div>
+        <div className="text-white">
+          {formatTimeSlot(slot.startTime, slot.endTime)}
         </div>
       ),
     },
@@ -113,18 +119,25 @@ const SlotBlockingByClinicianPage: React.FC = () => {
     {
       key: "block",
       header: "Block",
-      render: (slot: TimeSlot) => (
+      render: (slot: TimeSlot) =>
         slot.blockedSlotId ? (
-          <Button variant="secondary" size="sm" onClick={() => handleUnblock(slot)}>
-            
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleUnblock(slot)}
+          >
             Unblock
           </Button>
         ) : (
-          <Button variant="danger" size="sm" onClick={() => handleBlock(slot)} disabled={slot.status === "booked"}>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => handleBlock(slot)}
+            disabled={slot.status === "booked"}
+          >
             Block
           </Button>
-        )
-      ),
+        ),
     },
   ];
 
@@ -190,19 +203,24 @@ const SlotBlockingByClinicianPage: React.FC = () => {
           <div className="text-center py-8 text-slate-400">
             <CalendarOff size={48} className="mx-auto mb-4 opacity-50" />
             <p>
-              No slots found for {selectedClinician?.fullName || selectedClinician?.name} on {dateFilter}
+              No slots found for{" "}
+              {selectedClinician?.fullName || selectedClinician?.name} on{" "}
+              {dateFilter}
             </p>
           </div>
         ) : (
           <>
             <div className="mb-4 text-sm text-slate-400">
               Showing {slots.length} slot{slots.length !== 1 ? "s" : ""} for{" "}
-              {selectedClinician?.fullName || selectedClinician?.name} on {dateFilter}
+              {selectedClinician?.fullName || selectedClinician?.name} on{" "}
+              {dateFilter}
             </div>
             <Table
               columns={columns}
               data={slots}
-              keyExtractor={(slot) => slot.id?.toString() ?? String(slots.indexOf(slot))}
+              keyExtractor={(slot) =>
+                slot.id?.toString() ?? String(slots.indexOf(slot))
+              }
             />
           </>
         )}

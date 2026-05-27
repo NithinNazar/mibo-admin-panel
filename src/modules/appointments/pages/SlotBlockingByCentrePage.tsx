@@ -56,7 +56,9 @@ const SlotBlockingByCentrePage: React.FC = () => {
       toast.success("Slot blocked successfully");
       fetchAppointments();
     } catch (error) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
+      const err = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
       toast.error(err.response?.data?.error?.message || "Failed to block slot");
     }
   };
@@ -68,8 +70,12 @@ const SlotBlockingByCentrePage: React.FC = () => {
       toast.success("Slot unblocked successfully");
       fetchAppointments();
     } catch (error) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
-      toast.error(err.response?.data?.error?.message || "Failed to unblock slot");
+      const err = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
+      toast.error(
+        err.response?.data?.error?.message || "Failed to unblock slot",
+      );
     }
   };
 
@@ -86,8 +92,12 @@ const SlotBlockingByCentrePage: React.FC = () => {
       header: "Patient",
       render: (apt: Appointment) => (
         <div>
-          <div className="font-medium text-white">{apt.patient_name || "Unknown"}</div>
-          <div className="text-sm text-slate-400">{apt.patient_phone || "N/A"}</div>
+          <div className="font-medium text-white">
+            {apt.patient_name || "Unknown"}
+          </div>
+          <div className="text-sm text-slate-400">
+            {apt.patient_phone || "N/A"}
+          </div>
         </div>
       ),
     },
@@ -95,7 +105,9 @@ const SlotBlockingByCentrePage: React.FC = () => {
       key: "clinician",
       header: "Clinician",
       render: (apt: Appointment) => (
-        <span className="text-slate-300">{apt.clinician_name || "Unknown"}</span>
+        <span className="text-slate-300">
+          {apt.clinician_name || "Unknown"}
+        </span>
       ),
     },
     {
@@ -120,6 +132,7 @@ const SlotBlockingByCentrePage: React.FC = () => {
               ? new Date(apt.scheduled_start_at).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
+                  hour12: true,
                 })
               : "N/A"}
           </div>
@@ -131,24 +144,29 @@ const SlotBlockingByCentrePage: React.FC = () => {
       header: "Type",
       render: (apt: Appointment) => (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-miboTeal/20 text-miboTeal">
-          {apt.appointment_type ? apt.appointment_type.replace("_", " ") : "N/A"}
+          {apt.appointment_type
+            ? apt.appointment_type.replace("_", " ")
+            : "N/A"}
         </span>
       ),
     },
     {
       key: "block",
       header: "Block",
-      render: (apt: Appointment) => (
+      render: (apt: Appointment) =>
         apt.blocked_slot_id ? (
-          <Button variant="secondary" size="sm" onClick={() => handleUnblock(apt)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleUnblock(apt)}
+          >
             Unblock
           </Button>
         ) : (
           <Button variant="danger" size="sm" onClick={() => handleBlock(apt)}>
             Block
           </Button>
-        )
-      ),
+        ),
     },
   ];
 
@@ -184,7 +202,6 @@ const SlotBlockingByCentrePage: React.FC = () => {
                 ]}
               />
             </div>
-
           </div>
         </div>
       </Card>
@@ -203,7 +220,8 @@ const SlotBlockingByCentrePage: React.FC = () => {
         ) : (
           <>
             <div className="mb-4 text-sm text-slate-400">
-              Showing {appointments.length} appointment{appointments.length !== 1 ? "s" : ""}
+              Showing {appointments.length} appointment
+              {appointments.length !== 1 ? "s" : ""}
             </div>
             <Table
               columns={columns}
