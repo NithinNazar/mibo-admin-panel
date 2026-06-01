@@ -40,28 +40,42 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
     };
     reader.readAsDataURL(file);
 
-    // TODO: Upload to backend when endpoint is ready
-    // For now, we'll use the data URL as a placeholder
+    // Upload to S3 via backend
     setUploading(true);
     try {
-      // Simulate upload delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const formData = new FormData();
+      formData.append("profilePicture", file);
 
-      // In production, this would be:
-      // const formData = new FormData();
-      // formData.append('file', file);
-      // const response = await fetch('/api/upload/profile-picture', {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      // const data = await response.json();
-      // onChange(data.url);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || "https://api.mibo.care/api"}/upload/clinician-profile`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: formData,
+        },
+      );
 
-      // For now, use data URL
-      const dataUrl = reader.result as string;
-      onChange(dataUrl);
-    } catch (error) {
-      alert("Failed to upload image");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to upload image");
+      }
+
+      const data = await response.json();
+
+      // Use CloudFront URL from response
+      onChange(data.data.imageUrl);
+
+      console.log("✅ Image uploaded to S3:", data.data.imageUrl);
+    } catch (error: any) {
+      console.error("❌ Upload error:", error);
+      alert(`Failed to upload image: ${error.message}`);
+      // Clear preview on error
+      setPreviewUrl("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } finally {
       setUploading(false);
     }
