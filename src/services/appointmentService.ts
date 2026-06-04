@@ -112,6 +112,91 @@ class AppointmentService {
     });
     return response.data.data || response.data;
   }
+
+  // ==========================================
+  // CLINICIAN DASHBOARD APIs
+  // ==========================================
+
+  // Get clinician dashboard statistics
+  async getClinicianDashboardStats(
+    startDate: string,
+    endDate: string,
+  ): Promise<any> {
+    const response = await api.get("/appointments/dashboard/stats", {
+      params: { startDate, endDate },
+    });
+    return response.data.data || response.data;
+  }
+
+  // Get clinician's appointments for dashboard
+  async getClinicianDashboardAppointments(
+    startDate: string,
+    endDate: string,
+    status?: string,
+  ): Promise<any[]> {
+    const response = await api.get("/appointments/dashboard/appointments", {
+      params: { startDate, endDate, status },
+    });
+    return response.data.data || response.data;
+  }
+
+  // Start a session
+  async startSession(appointmentId: number): Promise<Appointment> {
+    const response = await api.post(
+      `/appointments/${appointmentId}/start-session`,
+    );
+    return response.data.data || response.data;
+  }
+
+  // End a session
+  async endSession(appointmentId: number): Promise<Appointment> {
+    const response = await api.post(
+      `/appointments/${appointmentId}/end-session`,
+    );
+    return response.data.data || response.data;
+  }
+
+  // Save clinician notes
+  async saveClinicianNotes(
+    appointmentId: number,
+    sessionNotes: string,
+  ): Promise<any> {
+    const response = await api.post(
+      `/appointments/${appointmentId}/clinician-notes`,
+      { session_notes: sessionNotes },
+    );
+    return response.data.data || response.data;
+  }
+
+  // Get previous session notes
+  async getPreviousSessionNotes(
+    appointmentId: number,
+    patientId: number,
+  ): Promise<any[]> {
+    const response = await api.get(
+      `/appointments/${appointmentId}/previous-notes`,
+      {
+        params: { patientId },
+      },
+    );
+    return response.data.data || response.data;
+  }
+
+  // Schedule follow-up
+  async scheduleFollowUp(
+    appointmentId: number,
+    followUpDate: string,
+    followUpNotes: string,
+  ): Promise<any> {
+    const response = await api.post(
+      `/appointments/${appointmentId}/schedule-followup`,
+      {
+        follow_up_date: followUpDate,
+        follow_up_notes: followUpNotes,
+      },
+    );
+    return response.data.data || response.data;
+  }
 }
 
 export default new AppointmentService();

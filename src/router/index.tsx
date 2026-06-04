@@ -43,7 +43,7 @@ import SupportPage from "../modules/settings/pages/SupportPage";
 import ProfilePage from "../modules/profile/pages/ProfilePage";
 
 // Clinician Dashboard
-import ClinicianDashboardEnhanced from "../components/Clinician/ClinicianDashboardEnhanced";
+import ClinicianDashboardPage from "../modules/clinician/pages/ClinicianDashboardPage";
 
 function AppRouter() {
   const { isAuthenticated, isLoading, isClinician } = useAuth();
@@ -129,11 +129,7 @@ function AppRouter() {
         <Route
           path="appointments"
           element={
-            isClinician ? (
-              <ClinicianDashboardEnhanced />
-            ) : (
-              <AllAppointmentsPage />
-            )
+            isClinician ? <ClinicianDashboardPage /> : <AllAppointmentsPage />
           }
         />
 

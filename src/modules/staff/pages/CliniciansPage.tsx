@@ -981,12 +981,12 @@ const CliniciansPage: React.FC = () => {
     try {
       setSlotsLoading(true);
 
-      // Get date range: 30 days in the past to 90 days in the future
+      // Get date range: Today to 30 days in the future
       const today = new Date();
       const startDate = new Date(today);
-      startDate.setDate(today.getDate() - 30); // 30 days ago
+      startDate.setHours(0, 0, 0, 0); // Start of today
       const endDate = new Date(today);
-      endDate.setDate(today.getDate() + 90); // 90 days from now
+      endDate.setDate(today.getDate() + 30); // 30 days from now
 
       const startDateStr = startDate.toISOString().split("T")[0];
       const endDateStr = endDate.toISOString().split("T")[0];
@@ -2090,7 +2090,7 @@ const CliniciansPage: React.FC = () => {
                 {/* Delete Slots By Day Button */}
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold text-miboTeal">
-                    Existing Slots (Next 30 Days)
+                    Existing Slots (Today + Next 30 Days)
                   </h3>
                   <Button
                     type="button"
@@ -2231,7 +2231,7 @@ const CliniciansPage: React.FC = () => {
               {editingClinician && clinicianSlots.length > 0 && (
                 <div className="mt-4 space-y-3">
                   <h4 className="text-sm font-medium text-slate-300">
-                    Existing Availability Slots (Next 30 Days)
+                    Existing Availability Slots (Today + Next 30 Days)
                   </h4>
                   {slotsLoading ? (
                     <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
@@ -2613,7 +2613,7 @@ const CliniciansPage: React.FC = () => {
                 {/* Available Slots Section - Read Only */}
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Available Slots (Next 30 Days)
+                    Available Slots (Today + Next 30 Days)
                   </label>
                   {slotsLoading ? (
                     <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
