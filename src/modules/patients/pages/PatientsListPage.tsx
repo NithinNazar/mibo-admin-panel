@@ -56,7 +56,9 @@ const PatientsListPage: React.FC = () => {
   });
 
   // Sorting state
-  const [sortBy, setSortBy] = useState<"name" | "mrn" | "centre" | null>(null);
+  const [sortBy, setSortBy] = useState<
+    "name" | "mrn" | "centre" | "registered" | null
+  >(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
@@ -74,7 +76,9 @@ const PatientsListPage: React.FC = () => {
           patient.fullName.toLowerCase().includes(query) ||
           patient.phone.includes(query) ||
           (patient.email && patient.email.toLowerCase().includes(query)) ||
-          (patient.username && patient.username.toLowerCase().includes(query)),
+          (patient.username &&
+            patient.username.toLowerCase().includes(query)) ||
+          (patient.mrn && patient.mrn.toLowerCase().includes(query)),
       );
       setFilteredPatients(filtered);
     }
@@ -228,13 +232,13 @@ const PatientsListPage: React.FC = () => {
   };
 
   // Handle sorting
-  const handleSort = (field: "name" | "mrn" | "centre") => {
+  const handleSort = (field: "name" | "mrn" | "centre" | "registered") => {
     if (sortBy === field) {
       // Toggle sort order
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(field);
-      setSortOrder("asc");
+      setSortOrder(field === "registered" ? "desc" : "asc"); // Default to desc for registration date (newest first)
     }
   };
 
@@ -243,8 +247,8 @@ const PatientsListPage: React.FC = () => {
     if (!sortBy) return filteredPatients;
 
     return [...filteredPatients].sort((a, b) => {
-      let aValue: string;
-      let bValue: string;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (sortBy) {
         case "name":
@@ -260,15 +264,30 @@ const PatientsListPage: React.FC = () => {
           aValue = a.upcomingAppointments?.[0]?.centreName?.toLowerCase() || "";
           bValue = b.upcomingAppointments?.[0]?.centreName?.toLowerCase() || "";
           break;
+        case "registered":
+          // Sort by registration date (createdAt)
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+
+          if (sortOrder === "asc") {
+            return aValue - bValue;
+          } else {
+            return bValue - aValue; // Newest first
+          }
         default:
           return 0;
       }
 
-      if (sortOrder === "asc") {
-        return aValue.localeCompare(bValue);
-      } else {
-        return bValue.localeCompare(aValue);
+      // For string comparisons
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        if (sortOrder === "asc") {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
       }
+
+      return 0;
     });
   }, [filteredPatients, sortBy, sortOrder]);
 
@@ -513,7 +532,7 @@ const PatientsListPage: React.FC = () => {
           />
           <input
             type="text"
-            placeholder="Search by name, phone, email, or username..."
+            placeholder="Search by name, phone, email, username, or MRN..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-miboTeal"
@@ -556,6 +575,17 @@ const PatientsListPage: React.FC = () => {
             >
               Centre
               {sortBy === "centre" && (
+                <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
+              )}
+            </Button>
+            <Button
+              variant={sortBy === "registered" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => handleSort("registered")}
+              className="flex items-center gap-1"
+            >
+              Registration Date
+              {sortBy === "registered" && (
                 <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
               )}
             </Button>

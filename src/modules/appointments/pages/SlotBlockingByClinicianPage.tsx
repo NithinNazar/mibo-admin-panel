@@ -117,8 +117,29 @@ const SlotBlockingByClinicianPage: React.FC = () => {
       ),
     },
     {
+      key: "status",
+      header: "Status",
+      render: (slot: TimeSlot) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            slot.status === "booked"
+              ? "bg-red-500/20 text-red-400"
+              : slot.status === "blocked"
+                ? "bg-orange-500/20 text-orange-400"
+                : "bg-green-500/20 text-green-400"
+          }`}
+        >
+          {slot.status === "booked"
+            ? "Booked"
+            : slot.status === "blocked"
+              ? "Blocked"
+              : "Available"}
+        </span>
+      ),
+    },
+    {
       key: "block",
-      header: "Block",
+      header: "Action",
       render: (slot: TimeSlot) =>
         slot.blockedSlotId ? (
           <Button
@@ -170,10 +191,12 @@ const SlotBlockingByClinicianPage: React.FC = () => {
               onChange={(e) => setClinicianFilter(e.target.value)}
               options={[
                 { value: "ALL", label: "Select Clinician" },
-                ...clinicians.map((c) => ({
-                  value: c.id,
-                  label: c.fullName || c.name,
-                })),
+                ...clinicians
+                  .filter((c) => c.isActive) // Only show active clinicians
+                  .map((c) => ({
+                    value: c.id,
+                    label: c.fullName || c.name,
+                  })),
               ]}
             />
           </div>

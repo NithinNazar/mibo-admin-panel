@@ -151,6 +151,23 @@ const SlotBlockingByCentrePage: React.FC = () => {
       ),
     },
     {
+      key: "status",
+      header: "Status",
+      render: (apt: Appointment) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            apt.status === "BOOKED" || apt.status === "CONFIRMED"
+              ? "bg-red-500/20 text-red-400"
+              : "bg-green-500/20 text-green-400"
+          }`}
+        >
+          {apt.status === "BOOKED" || apt.status === "CONFIRMED"
+            ? "Booked"
+            : "Available"}
+        </span>
+      ),
+    },
+    {
       key: "block",
       header: "Block",
       render: (apt: Appointment) =>

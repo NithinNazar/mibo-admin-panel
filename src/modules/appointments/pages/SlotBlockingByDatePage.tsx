@@ -31,7 +31,12 @@ const SlotBlockingByDatePage: React.FC = () => {
   const handleBlockEntireDay = async () => {
     const clinician = clinicians.find((c) => c.id === selectedClinician);
     if (!clinician) return;
-    if (!window.confirm(`Block all slots for ${clinician.fullName || clinician.name} on ${selectedDate}?`)) return;
+    if (
+      !window.confirm(
+        `Block all slots for ${clinician.fullName || clinician.name} on ${selectedDate}?`,
+      )
+    )
+      return;
     try {
       setBlocking(true);
       const response = await slotBlockingService.blockClinicianDay(
@@ -44,7 +49,9 @@ const SlotBlockingByDatePage: React.FC = () => {
         `Blocked ${response.data.blocked_count} slots. ${response.data.affected_patients.length} patient(s) notified.`,
       );
     } catch (error) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
+      const err = error as {
+        response?: { data?: { error?: { message?: string } } };
+      };
       toast.error(err.response?.data?.error?.message || "Failed to block day");
     } finally {
       setBlocking(false);
@@ -56,7 +63,11 @@ const SlotBlockingByDatePage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="secondary" size="sm" onClick={() => navigate("/slot-blocking")}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate("/slot-blocking")}
+        >
           <ArrowLeft size={16} />
         </Button>
         <div>
@@ -79,10 +90,12 @@ const SlotBlockingByDatePage: React.FC = () => {
                 onChange={(e) => setSelectedClinician(e.target.value)}
                 options={[
                   { value: "ALL", label: "Select Clinician" },
-                  ...clinicians.map((c) => ({
-                    value: c.id,
-                    label: c.fullName || c.name,
-                  })),
+                  ...clinicians
+                    .filter((c) => c.isActive) // Only show active clinicians
+                    .map((c) => ({
+                      value: c.id,
+                      label: c.fullName || c.name,
+                    })),
                 ]}
               />
             </div>

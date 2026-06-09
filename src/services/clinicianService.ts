@@ -161,14 +161,16 @@ class ClinicianService {
   // Toggle clinician active status
   async toggleActive(id: string, isActive: boolean): Promise<Clinician> {
     try {
-      const response = await api.patch(
-        `/users/clinicians/${id}/toggle-active`,
-        {
-          isActive,
-        },
+      console.log(
+        `[toggleActive] Calling API: /clinicians/${id}/toggle-active with isActive=${isActive}`,
       );
+      const response = await api.patch(`/clinicians/${id}/toggle-active`, {
+        isActive,
+      });
+      console.log(`[toggleActive] API response:`, response.data);
       return response.data.data || response.data;
     } catch (error) {
+      console.error(`[toggleActive] API error:`, error);
       throw new Error(this.extractErrorMessage(error));
     }
   }

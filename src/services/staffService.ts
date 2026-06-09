@@ -149,7 +149,7 @@ class StaffService {
     credentials: { username?: string; password?: string },
   ): Promise<any> {
     const response = await api.patch(
-      `/clinicians/${clinicianId}/credentials`,
+      `/users/clinicians/${clinicianId}/credentials`,
       credentials,
     );
     return response.data.data || response.data;

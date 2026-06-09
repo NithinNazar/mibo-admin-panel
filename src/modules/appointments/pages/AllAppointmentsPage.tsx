@@ -43,13 +43,12 @@ const AllAppointmentsPage: React.FC = () => {
 
   // Filters - Initialize centreFilter based on user role
   const [searchTerm, setSearchTerm] = useState("");
-  const [mrnSearch, setMrnSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [centreFilter, setCentreFilter] = useState<string>(
     isFrontDesk && assignedCentreId ? assignedCentreId : "ALL",
   );
   const [clinicianFilter, setClinicianFilter] = useState<string>("ALL");
-  const [timeFilter, setTimeFilter] = useState<string>("ALL");
+  const [timeFilter, setTimeFilter] = useState<string>("CURRENT"); // Default to today's appointments
   const [dateFilter, setDateFilter] = useState<string>("");
 
   // Patient note modal state
@@ -69,11 +68,32 @@ const AllAppointmentsPage: React.FC = () => {
   }, [isFrontDesk, assignedCentreId]);
 
   useEffect(() => {
+    // Reset clinician filter when centre filter changes
+    // This ensures selected clinician is from the selected centre
+    if (clinicianFilter !== "ALL") {
+      const selectedClinician = clinicians.find(
+        (c: any) => String(c.id) === String(clinicianFilter),
+      );
+
+      // If clinician is not active or not in selected centre, reset to ALL
+      if (selectedClinician) {
+        if (!selectedClinician.isActive) {
+          setClinicianFilter("ALL");
+        } else if (
+          centreFilter !== "ALL" &&
+          String(selectedClinician.primaryCentreId) !== String(centreFilter)
+        ) {
+          setClinicianFilter("ALL");
+        }
+      }
+    }
+  }, [centreFilter, clinicians, clinicianFilter]);
+
+  useEffect(() => {
     applyFilters();
   }, [
     appointments,
     searchTerm,
-    mrnSearch,
     statusFilter,
     centreFilter,
     clinicianFilter,
@@ -130,22 +150,15 @@ const AllAppointmentsPage: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...appointments];
 
-    // Search filter (patient name, phone, clinician name)
+    // Combined search filter (patient name, phone, clinician name, MRN)
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (apt) =>
           apt.patient_name.toLowerCase().includes(search) ||
           apt.patient_phone.includes(search) ||
-          apt.clinician_name.toLowerCase().includes(search),
-      );
-    }
-
-    // MRN search filter
-    if (mrnSearch) {
-      const search = mrnSearch.toLowerCase();
-      filtered = filtered.filter((apt) =>
-        apt.patient_mrn?.toLowerCase().includes(search),
+          apt.clinician_name.toLowerCase().includes(search) ||
+          (apt.patient_mrn && apt.patient_mrn.toLowerCase().includes(search)),
       );
     }
 
@@ -530,7 +543,7 @@ const AllAppointmentsPage: React.FC = () => {
                 />
                 <Input
                   type="text"
-                  placeholder="Search by patient name, phone, or clinician..."
+                  placeholder="Search by patient name, phone, clinician, or MRN..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -559,14 +572,30 @@ const AllAppointmentsPage: React.FC = () => {
               onChange={(e) => setClinicianFilter(e.target.value)}
               options={[
                 { value: "ALL", label: "All Clinicians" },
-                ...clinicians.map((clinician: any) => ({
-                  value: clinician.id,
-                  label:
-                    clinician.full_name ||
-                    clinician.fullName ||
-                    clinician.name ||
-                    "Unknown",
-                })),
+                ...clinicians
+                  .filter((clinician: any) => {
+                    // Filter by active status
+                    if (!clinician.isActive) return false;
+
+                    // If a specific centre is selected, filter by that centre
+                    if (centreFilter !== "ALL") {
+                      return (
+                        String(clinician.primaryCentreId) ===
+                        String(centreFilter)
+                      );
+                    }
+
+                    // Show all active clinicians when "All Centres" is selected
+                    return true;
+                  })
+                  .map((clinician: any) => ({
+                    value: clinician.id,
+                    label:
+                      clinician.full_name ||
+                      clinician.fullName ||
+                      clinician.name ||
+                      "Unknown",
+                  })),
               ]}
             />
 
@@ -613,34 +642,6 @@ const AllAppointmentsPage: React.FC = () => {
                 onClick={() => setDateFilter("")}
               >
                 Clear Date
-              </Button>
-            )}
-          </div>
-
-          {/* MRN Search Filter */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            <div className="md:col-span-2">
-              <div className="relative">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                  size={20}
-                />
-                <Input
-                  type="text"
-                  placeholder="Search by MRN..."
-                  value={mrnSearch}
-                  onChange={(e) => setMrnSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            {mrnSearch && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setMrnSearch("")}
-              >
-                Clear MRN
               </Button>
             )}
           </div>

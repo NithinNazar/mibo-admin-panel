@@ -924,12 +924,18 @@ const CliniciansPage: React.FC = () => {
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
+      console.log(
+        `[handleToggleActive] Starting toggle for ID=${id}, isActive=${isActive}`,
+      );
       await clinicianService.toggleActive(id, isActive);
+      console.log(`[handleToggleActive] Toggle successful, fetching data...`);
+      await fetchData(); // Wait for data to refresh before showing success
+      console.log(`[handleToggleActive] Data fetched successfully`);
       toast.success(
         `Clinician ${isActive ? "activated" : "deactivated"} successfully`,
       );
-      fetchData();
     } catch (error: any) {
+      console.error(`[handleToggleActive] Error:`, error);
       toast.error(error.message || "Failed to update clinician status");
     }
   };
@@ -981,12 +987,12 @@ const CliniciansPage: React.FC = () => {
     try {
       setSlotsLoading(true);
 
-      // Get date range: Today to 30 days in the future
-      const today = new Date();
+      // Get date range: Today to 30 days in the future (always current day, not cached)
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Start of today (midnight)
       const startDate = new Date(today);
-      startDate.setHours(0, 0, 0, 0); // Start of today
       const endDate = new Date(today);
-      endDate.setDate(today.getDate() + 30); // 30 days from now
+      endDate.setDate(today.getDate() + 30); // 30 days from today
 
       const startDateStr = startDate.toISOString().split("T")[0];
       const endDateStr = endDate.toISOString().split("T")[0];
@@ -999,6 +1005,20 @@ const CliniciansPage: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         const slots = data.data || [];
+
+        // Filter out past dates - only show slots from today onwards
+        const now = new Date();
+        const todayDateStr = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        )
+          .toISOString()
+          .split("T")[0];
+
+        const filteredSlots = slots.filter((slot: any) => {
+          return slot.date >= todayDateStr;
+        });
 
         // Also fetch availability rules to get rule IDs
         const rulesResponse = await fetch(
@@ -1022,11 +1042,11 @@ const CliniciansPage: React.FC = () => {
 
         console.log(
           "[DEBUG] Slots to process:",
-          JSON.stringify(slots.slice(0, 2), null, 2),
+          JSON.stringify(filteredSlots.slice(0, 2), null, 2),
         );
 
         // Group slots by date and attach rule IDs
-        const slotsByDate = slots.reduce((acc: any, slot: any) => {
+        const slotsByDate = filteredSlots.reduce((acc: any, slot: any) => {
           const date = slot.date;
           if (!acc[date]) {
             acc[date] = [];
@@ -2089,9 +2109,15 @@ const CliniciansPage: React.FC = () => {
               <div className="space-y-4 bg-slate-700/30 p-4 rounded-lg">
                 {/* Delete Slots By Day Button */}
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-miboTeal">
-                    Existing Slots (Today + Next 30 Days)
-                  </h3>
+                  <div>
+                    <h3 className="text-sm font-semibold text-miboTeal">
+                      Existing Slots (Current Day + Next 30 Days)
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Displaying slots from today onwards, automatically updated
+                      daily
+                    </p>
+                  </div>
                   <Button
                     type="button"
                     variant="danger"
@@ -2230,9 +2256,15 @@ const CliniciansPage: React.FC = () => {
               {/* Display Existing Slots from Database */}
               {editingClinician && clinicianSlots.length > 0 && (
                 <div className="mt-4 space-y-3">
-                  <h4 className="text-sm font-medium text-slate-300">
-                    Existing Availability Slots (Today + Next 30 Days)
-                  </h4>
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-300">
+                      Existing Availability Slots (Current Day + Next 30 Days)
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Showing slots from today onwards, past dates are
+                      automatically hidden
+                    </p>
+                  </div>
                   {slotsLoading ? (
                     <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
                       Loading slots...
@@ -2612,9 +2644,15 @@ const CliniciansPage: React.FC = () => {
 
                 {/* Available Slots Section - Read Only */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Available Slots (Today + Next 30 Days)
-                  </label>
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium text-slate-300">
+                      Available Slots (Current Day + Next 30 Days)
+                    </label>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Rolling 30-day window from current date, past dates
+                      excluded
+                    </p>
+                  </div>
                   {slotsLoading ? (
                     <div className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
                       Loading slots...
