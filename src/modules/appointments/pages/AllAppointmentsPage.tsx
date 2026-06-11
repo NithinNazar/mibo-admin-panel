@@ -5,6 +5,7 @@ import Button from "../../../components/ui/Button";
 import Table from "../../../components/ui/Table";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
+import DateRangeCalendar from "../../clinician/components/DateRangeCalendar";
 import {
   Calendar,
   Download,
@@ -13,6 +14,9 @@ import {
   Search,
   Plus,
   X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import appointmentService from "../../../services/appointmentService";
@@ -49,7 +53,10 @@ const AllAppointmentsPage: React.FC = () => {
   );
   const [clinicianFilter, setClinicianFilter] = useState<string>("ALL");
   const [timeFilter, setTimeFilter] = useState<string>("CURRENT"); // Default to today's appointments
-  const [dateFilter, setDateFilter] = useState<string>("");
+  const [selectedStartDate, setSelectedStartDate] = useState<Date>(new Date());
+  const [selectedEndDate, setSelectedEndDate] = useState<Date>(new Date());
+  const [sortBy, setSortBy] = useState<"scheduled" | "booked" | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Patient note modal state
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -98,7 +105,10 @@ const AllAppointmentsPage: React.FC = () => {
     centreFilter,
     clinicianFilter,
     timeFilter,
-    dateFilter,
+    selectedStartDate,
+    selectedEndDate,
+    sortBy,
+    sortOrder,
   ]);
 
   const fetchData = async () => {
@@ -204,40 +214,89 @@ const AllAppointmentsPage: React.FC = () => {
       });
     }
 
-    // Date filter (specific date)
-    if (dateFilter) {
+    // Date range filter (from DateRangeCalendar)
+    if (selectedStartDate && selectedEndDate && timeFilter === "ALL") {
+      const startDate = new Date(selectedStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(selectedEndDate);
+      endDate.setHours(23, 59, 59, 999);
+
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at)
-          .toISOString()
-          .split("T")[0];
-        return aptDate === dateFilter;
+        const aptDate = new Date(apt.scheduled_start_at);
+        return aptDate >= startDate && aptDate <= endDate;
       });
     }
 
-    // Sort appointments: nearest upcoming first, then past appointments (most recent first)
-    const now = new Date();
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.scheduled_start_at);
-      const dateB = new Date(b.scheduled_start_at);
+    // Apply sorting
+    if (sortBy) {
+      filtered.sort((a, b) => {
+        let dateA: Date;
+        let dateB: Date;
 
-      const isAUpcoming = dateA >= now;
-      const isBUpcoming = dateB >= now;
+        if (sortBy === "scheduled") {
+          dateA = new Date(a.scheduled_start_at);
+          dateB = new Date(b.scheduled_start_at);
+        } else {
+          // sortBy === "booked"
+          dateA = new Date(a.created_at);
+          dateB = new Date(b.created_at);
+        }
 
-      // Both upcoming: sort ascending (nearest first)
-      if (isAUpcoming && isBUpcoming) {
-        return dateA.getTime() - dateB.getTime();
-      }
+        if (sortOrder === "asc") {
+          return dateA.getTime() - dateB.getTime();
+        } else {
+          return dateB.getTime() - dateA.getTime();
+        }
+      });
+    } else {
+      // Default sort: nearest upcoming first, then past appointments (most recent first)
+      const now = new Date();
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.scheduled_start_at);
+        const dateB = new Date(b.scheduled_start_at);
 
-      // Both past: sort descending (most recent first)
-      if (!isAUpcoming && !isBUpcoming) {
-        return dateB.getTime() - dateA.getTime();
-      }
+        const isAUpcoming = dateA >= now;
+        const isBUpcoming = dateB >= now;
 
-      // One upcoming, one past: upcoming comes first
-      return isAUpcoming ? -1 : 1;
-    });
+        // Both upcoming: sort ascending (nearest first)
+        if (isAUpcoming && isBUpcoming) {
+          return dateA.getTime() - dateB.getTime();
+        }
+
+        // Both past: sort descending (most recent first)
+        if (!isAUpcoming && !isBUpcoming) {
+          return dateB.getTime() - dateA.getTime();
+        }
+
+        // One upcoming, one past: upcoming comes first
+        return isAUpcoming ? -1 : 1;
+      });
+    }
 
     setFilteredAppointments(filtered);
+  };
+
+  const handleDateRangeChange = (start: Date, end: Date) => {
+    setSelectedStartDate(start);
+    setSelectedEndDate(end);
+    // When using date range calendar, set timeFilter to ALL
+    setTimeFilter("ALL");
+  };
+
+  const handleSort = (type: "scheduled" | "booked") => {
+    if (sortBy === type) {
+      // Toggle sort order
+      if (sortOrder === "asc") {
+        setSortOrder("desc");
+      } else {
+        // Clear sort if clicking again on descending
+        setSortBy(null);
+        setSortOrder("asc");
+      }
+    } else {
+      setSortBy(type);
+      setSortOrder("asc");
+    }
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
@@ -283,6 +342,12 @@ const AllAppointmentsPage: React.FC = () => {
       Duration: `${apt.duration_minutes} min`,
       Type: apt.appointment_type,
       Status: apt.status,
+      "Booked At Date": apt.created_at
+        ? new Date(apt.created_at).toLocaleDateString()
+        : "N/A",
+      "Booked At Time": apt.created_at
+        ? new Date(apt.created_at).toLocaleTimeString()
+        : "N/A",
       Source: apt.source,
       "Booked By": apt.bookedByUserName,
     }));
@@ -302,6 +367,7 @@ const AllAppointmentsPage: React.FC = () => {
       "Date",
       "Time",
       "Status",
+      "Booked At",
     ];
 
     const rows = filteredAppointments.map((apt) => [
@@ -314,6 +380,9 @@ const AllAppointmentsPage: React.FC = () => {
       new Date(apt.scheduled_start_at).toLocaleDateString(),
       new Date(apt.scheduled_start_at).toLocaleTimeString(),
       apt.status,
+      apt.created_at
+        ? `${new Date(apt.created_at).toLocaleDateString()} ${new Date(apt.created_at).toLocaleTimeString()}`
+        : "N/A",
     ]);
 
     exportToPDF(headers, rows, "Appointments Report");
@@ -331,6 +400,7 @@ const AllAppointmentsPage: React.FC = () => {
       "Date",
       "Time",
       "Status",
+      "Booked At",
     ];
 
     const rows = filteredAppointments.map((apt) => [
@@ -343,6 +413,9 @@ const AllAppointmentsPage: React.FC = () => {
       new Date(apt.scheduled_start_at).toLocaleDateString(),
       new Date(apt.scheduled_start_at).toLocaleTimeString(),
       apt.status,
+      apt.created_at
+        ? `${new Date(apt.created_at).toLocaleDateString()} ${new Date(apt.created_at).toLocaleTimeString()}`
+        : "N/A",
     ]);
 
     printTable("Appointments", headers, rows);
@@ -453,6 +526,27 @@ const AllAppointmentsPage: React.FC = () => {
         >
           {apt.status}
         </span>
+      ),
+    },
+    {
+      key: "booked_at",
+      header: "Booked at",
+      render: (apt: Appointment) => (
+        <div className="space-y-1">
+          <div className="text-white text-sm">
+            {apt.created_at
+              ? new Date(apt.created_at).toLocaleDateString()
+              : "N/A"}
+          </div>
+          <div className="text-slate-400 text-xs">
+            {apt.created_at
+              ? new Date(apt.created_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "N/A"}
+          </div>
+        </div>
       ),
     },
     {
@@ -625,25 +719,63 @@ const AllAppointmentsPage: React.FC = () => {
             />
           </div>
 
-          {/* Specific Date Filter */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            <div className="md:col-span-2">
-              <Input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                placeholder="Filter by specific date"
+          {/* Date Range Filter and Sort Buttons */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-400">Date Range:</span>
+              <DateRangeCalendar
+                startDate={selectedStartDate}
+                endDate={selectedEndDate}
+                onDateRangeChange={handleDateRangeChange}
               />
             </div>
-            {dateFilter && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-400">Sort by:</span>
               <Button
-                variant="secondary"
+                variant={sortBy === "scheduled" ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => setDateFilter("")}
+                onClick={() => handleSort("scheduled")}
+                className="flex items-center gap-2"
               >
-                Clear Date
+                Appointment Date
+                {sortBy === "scheduled" &&
+                  (sortOrder === "asc" ? (
+                    <ArrowUp size={16} />
+                  ) : (
+                    <ArrowDown size={16} />
+                  ))}
+                {!sortBy && <ArrowUpDown size={16} className="opacity-50" />}
               </Button>
-            )}
+              <Button
+                variant={sortBy === "booked" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => handleSort("booked")}
+                className="flex items-center gap-2"
+              >
+                Registration Date
+                {sortBy === "booked" &&
+                  (sortOrder === "asc" ? (
+                    <ArrowUp size={16} />
+                  ) : (
+                    <ArrowDown size={16} />
+                  ))}
+                {!sortBy && <ArrowUpDown size={16} className="opacity-50" />}
+              </Button>
+              {sortBy && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setSortBy(null);
+                    setSortOrder("asc");
+                  }}
+                  title="Clear sort"
+                >
+                  <X size={16} />
+                  Clear Sort
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Export Buttons */}

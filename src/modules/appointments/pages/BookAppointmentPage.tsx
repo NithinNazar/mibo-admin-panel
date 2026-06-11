@@ -12,6 +12,8 @@ import {
   User,
   Calendar,
   Video,
+  Search,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import centreService from "../../../services/centreService";
@@ -50,10 +52,19 @@ const BookAppointmentPage: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [sessionType, setSessionType] = useState<AppointmentType>("IN_PERSON");
   const [selectedPatient, setSelectedPatient] = useState<string>("");
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [patientSearchResults, setPatientSearchResults] = useState<Patient[]>(
+    [],
+  );
+  const [isSearchingPatient, setIsSearchingPatient] = useState(false);
+  const [showCreatePatient, setShowCreatePatient] = useState(true); // Default to create new patient
   const [newPatient, setNewPatient] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     email: "",
+    age: "",
+    gender: "",
   });
   const [patientNotes, setPatientNotes] = useState(""); // Patient notes for booking
 
@@ -117,6 +128,36 @@ const BookAppointmentPage: React.FC = () => {
     }
   };
 
+  const searchPatients = async (query: string) => {
+    if (!query.trim()) {
+      setPatientSearchResults([]);
+      return;
+    }
+
+    setIsSearchingPatient(true);
+    try {
+      // Search in the already loaded patients list
+      const filtered = patients.filter(
+        (p) =>
+          p.fullName.toLowerCase().includes(query.toLowerCase()) ||
+          p.phone.includes(query) ||
+          (p.email && p.email.toLowerCase().includes(query.toLowerCase())) ||
+          (p.mrn && p.mrn.toLowerCase().includes(query.toLowerCase())),
+      );
+      setPatientSearchResults(filtered);
+    } catch (error: any) {
+      toast.error("Failed to search patients");
+    } finally {
+      setIsSearchingPatient(false);
+    }
+  };
+
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient(patient.userId);
+    setPatientSearchQuery(patient.fullName);
+    setPatientSearchResults([]);
+  };
+
   const fetchAvailabilityRange = async () => {
     try {
       setLoading(true);
@@ -171,7 +212,7 @@ const BookAppointmentPage: React.FC = () => {
       toast.error("Please select session type");
       return;
     }
-    if (currentStep === 5 && !selectedPatient && !newPatient.fullName) {
+    if (currentStep === 5 && !selectedPatient && !newPatient.firstName) {
       toast.error("Please select or create a patient");
       return;
     }
@@ -189,9 +230,27 @@ const BookAppointmentPage: React.FC = () => {
 
       // Create patient if new
       let patientId = selectedPatient;
-      if (!patientId && newPatient.fullName) {
-        const patient = await patientService.createPatient(newPatient);
-        patientId = patient.id;
+      if (!patientId && newPatient.firstName) {
+        const fullName =
+          `${newPatient.firstName} ${newPatient.lastName}`.trim();
+        const patient = await patientService.createPatient({
+          fullName: fullName,
+          phone: newPatient.phone,
+          email: newPatient.email || undefined,
+          dateOfBirth: newPatient.age
+            ? new Date(
+                new Date().getFullYear() - parseInt(newPatient.age),
+                0,
+                1,
+              )
+                .toISOString()
+                .split("T")[0]
+            : undefined,
+          gender: newPatient.gender
+            ? (newPatient.gender as "male" | "female" | "other")
+            : undefined,
+        });
+        patientId = patient.userId;
       }
 
       if (!selectedSlot) {
@@ -227,7 +286,17 @@ const BookAppointmentPage: React.FC = () => {
       setSelectedSlot(null);
       setSessionType("IN_PERSON");
       setSelectedPatient("");
-      setNewPatient({ fullName: "", phone: "", email: "" });
+      setPatientSearchQuery("");
+      setPatientSearchResults([]);
+      setShowCreatePatient(true);
+      setNewPatient({
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+        age: "",
+        gender: "",
+      });
       setPatientNotes(""); // Reset patient notes
     } catch (error: any) {
       toast.error(
@@ -474,60 +543,268 @@ const BookAppointmentPage: React.FC = () => {
 
         {/* Step 5: Patient Details */}
         {currentStep === 5 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">
-              Patient Details
-            </h3>
-            <Select
-              label="Select Existing Patient"
-              value={selectedPatient}
-              onChange={(e) => {
-                setSelectedPatient(e.target.value);
-                setNewPatient({ fullName: "", phone: "", email: "" });
-              }}
-              options={[
-                { value: "", label: "-- Create New Patient --" },
-                ...patients.map((p) => ({
-                  value: p.id,
-                  label: `${p.fullName} (${p.phone})`,
-                })),
-              ]}
-            />
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">
+                Patient Details
+              </h3>
+              {/* Toggle buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant={showCreatePatient ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => {
+                    setShowCreatePatient(true);
+                    setSelectedPatient("");
+                    setPatientSearchQuery("");
+                    setPatientSearchResults([]);
+                  }}
+                >
+                  <User size={16} />
+                  Create New Patient
+                </Button>
+                <Button
+                  variant={!showCreatePatient ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => {
+                    setShowCreatePatient(false);
+                    setNewPatient({
+                      firstName: "",
+                      lastName: "",
+                      phone: "",
+                      email: "",
+                      age: "",
+                      gender: "",
+                    });
+                  }}
+                >
+                  <Search size={16} />
+                  Search Existing
+                </Button>
+              </div>
+            </div>
 
-            {!selectedPatient && (
-              <div className="space-y-4 pt-4 border-t border-slate-700">
-                <h4 className="font-medium text-white">
-                  New Patient Information
-                </h4>
-                <Input
-                  label="Full Name"
-                  type="text"
-                  placeholder="Enter patient name"
-                  value={newPatient.fullName}
-                  onChange={(e) =>
-                    setNewPatient({ ...newPatient, fullName: e.target.value })
-                  }
-                  required
-                />
-                <Input
-                  label="Phone Number"
-                  type="tel"
-                  placeholder="+91 9876543210"
-                  value={newPatient.phone}
-                  onChange={(e) =>
-                    setNewPatient({ ...newPatient, phone: e.target.value })
-                  }
-                  required
-                />
-                <Input
-                  label="Email (Optional)"
-                  type="email"
-                  placeholder="patient@example.com"
-                  value={newPatient.email}
-                  onChange={(e) =>
-                    setNewPatient({ ...newPatient, email: e.target.value })
-                  }
-                />
+            {showCreatePatient ? (
+              /* Create New Patient Form */
+              <div className="space-y-4">
+                <div className="p-4 bg-miboTeal/10 border border-miboTeal/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-miboTeal">
+                    <User size={16} />
+                    <span className="text-sm font-medium">
+                      Creating new patient record
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="First Name"
+                    type="text"
+                    placeholder="Enter first name"
+                    value={newPatient.firstName}
+                    onChange={(e) =>
+                      setNewPatient({
+                        ...newPatient,
+                        firstName: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                  <Input
+                    label="Last Name"
+                    type="text"
+                    placeholder="Enter last name"
+                    value={newPatient.lastName}
+                    onChange={(e) =>
+                      setNewPatient({ ...newPatient, lastName: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Phone Number"
+                    type="tel"
+                    placeholder="+91 9876543210"
+                    value={newPatient.phone}
+                    onChange={(e) =>
+                      setNewPatient({ ...newPatient, phone: e.target.value })
+                    }
+                    required
+                  />
+                  <Input
+                    label="Email (Optional)"
+                    type="email"
+                    placeholder="patient@example.com"
+                    value={newPatient.email}
+                    onChange={(e) =>
+                      setNewPatient({ ...newPatient, email: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Age (Optional)"
+                    type="number"
+                    placeholder="Enter age"
+                    min="0"
+                    max="150"
+                    value={newPatient.age}
+                    onChange={(e) =>
+                      setNewPatient({ ...newPatient, age: e.target.value })
+                    }
+                  />
+                  <Select
+                    label="Gender (Optional)"
+                    value={newPatient.gender}
+                    onChange={(e) =>
+                      setNewPatient({ ...newPatient, gender: e.target.value })
+                    }
+                    options={[
+                      { value: "", label: "Select gender" },
+                      { value: "male", label: "Male" },
+                      { value: "female", label: "Female" },
+                      { value: "other", label: "Other" },
+                    ]}
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Search Existing Patient */
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <Search size={16} />
+                    <span className="text-sm font-medium">
+                      Search by name, phone, email, or MRN
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="relative">
+                    <Search
+                      size={20}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Search patients by name, phone, email, or MRN..."
+                      value={patientSearchQuery}
+                      onChange={(e) => {
+                        setPatientSearchQuery(e.target.value);
+                        searchPatients(e.target.value);
+                      }}
+                      className="pl-10"
+                    />
+                  </div>
+
+                  {/* Search Results Dropdown */}
+                  {patientSearchQuery && patientSearchResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-80 overflow-y-auto">
+                      {patientSearchResults.map((patient) => (
+                        <button
+                          key={patient.userId}
+                          onClick={() => handlePatientSelect(patient)}
+                          className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-white">
+                                {patient.fullName}
+                              </div>
+                              <div className="text-sm text-slate-400 mt-1">
+                                Phone: {patient.phone}
+                              </div>
+                              {patient.email && (
+                                <div className="text-sm text-slate-400">
+                                  Email: {patient.email}
+                                </div>
+                              )}
+                              {patient.mrn && (
+                                <div className="text-sm text-slate-500">
+                                  MRN: {patient.mrn}
+                                </div>
+                              )}
+                            </div>
+                            <ChevronRight
+                              size={20}
+                              className="text-slate-400"
+                            />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {patientSearchQuery &&
+                    !isSearchingPatient &&
+                    patientSearchResults.length === 0 && (
+                      <div className="absolute z-10 w-full mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-4">
+                        <div className="text-slate-400 text-center">
+                          No patients found matching "{patientSearchQuery}"
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setShowCreatePatient(true)}
+                          className="w-full mt-3"
+                        >
+                          Create New Patient Instead
+                        </Button>
+                      </div>
+                    )}
+                </div>
+
+                {/* Selected Patient Display */}
+                {selectedPatient && (
+                  <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 text-green-400 mb-2">
+                          <Check size={16} />
+                          <span className="text-sm font-medium">
+                            Patient Selected
+                          </span>
+                        </div>
+                        <div className="text-white font-medium">
+                          {
+                            patients.find((p) => p.userId === selectedPatient)
+                              ?.fullName
+                          }
+                        </div>
+                        <div className="text-sm text-slate-400 mt-1">
+                          {
+                            patients.find((p) => p.userId === selectedPatient)
+                              ?.phone
+                          }
+                        </div>
+                        {patients.find((p) => p.userId === selectedPatient)
+                          ?.email && (
+                          <div className="text-sm text-slate-400">
+                            {
+                              patients.find((p) => p.userId === selectedPatient)
+                                ?.email
+                            }
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPatient("");
+                          setPatientSearchQuery("");
+                        }}
+                      >
+                        <X size={16} />
+                        Change
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -572,9 +849,20 @@ const BookAppointmentPage: React.FC = () => {
                 <div className="text-sm text-slate-400">Patient</div>
                 <div className="text-white font-medium">
                   {selectedPatient
-                    ? patients.find((p) => p.id === selectedPatient)?.fullName
-                    : newPatient.fullName}
+                    ? patients.find((p) => p.userId === selectedPatient)
+                        ?.fullName
+                    : `${newPatient.firstName} ${newPatient.lastName}`.trim()}
                 </div>
+                {!selectedPatient && newPatient.phone && (
+                  <div className="text-sm text-slate-400">
+                    {newPatient.phone}
+                  </div>
+                )}
+                {!selectedPatient && newPatient.age && (
+                  <div className="text-sm text-slate-400">
+                    Age: {newPatient.age}
+                  </div>
+                )}
               </div>
             </div>
 

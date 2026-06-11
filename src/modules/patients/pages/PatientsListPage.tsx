@@ -409,8 +409,16 @@ const PatientsListPage: React.FC = () => {
       key: "registered",
       header: "Registered",
       render: (patient: Patient) => (
-        <div className="text-slate-300 text-sm">
-          {new Date(patient.createdAt).toLocaleDateString()}
+        <div className="space-y-1">
+          <div className="text-white text-sm font-medium">
+            {new Date(patient.createdAt).toLocaleDateString()}
+          </div>
+          <div className="text-slate-400 text-xs">
+            {new Date(patient.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </div>
         </div>
       ),
     },
