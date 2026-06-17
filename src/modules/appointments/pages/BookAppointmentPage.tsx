@@ -38,6 +38,11 @@ const BookAppointmentPage: React.FC = () => {
 
   const [currentStep, setCurrentStep] = useState<BookingStep>(1);
   const [loading, setLoading] = useState(false);
+  const [showDirectPaymentModal, setShowDirectPaymentModal] = useState(false);
+  const [directPaymentMethod, setDirectPaymentMethod] = useState<
+    "CASH" | "CARD" | "UPI"
+  >("CASH");
+  const [confirmingDirectPayment, setConfirmingDirectPayment] = useState(false);
 
   // Data states
   const [centres, setCentres] = useState<Centre[]>([]);
@@ -123,7 +128,9 @@ const BookAppointmentPage: React.FC = () => {
     try {
       const data = await patientService.getPatients();
       setPatients(data);
+      console.log(`✅ Loaded ${data.length} patients for search`);
     } catch (error: any) {
+      console.error("Failed to fetch patients:", error);
       toast.error("Failed to fetch patients");
     }
   };
@@ -136,16 +143,40 @@ const BookAppointmentPage: React.FC = () => {
 
     setIsSearchingPatient(true);
     try {
-      // Search in the already loaded patients list
-      const filtered = patients.filter(
-        (p) =>
-          p.fullName.toLowerCase().includes(query.toLowerCase()) ||
-          p.phone.includes(query) ||
-          (p.email && p.email.toLowerCase().includes(query.toLowerCase())) ||
-          (p.mrn && p.mrn.toLowerCase().includes(query.toLowerCase())),
+      const searchQuery = query.toLowerCase().trim();
+
+      console.log(
+        `🔍 Searching for: "${searchQuery}" in ${patients.length} patients`,
       );
+
+      // Search in the already loaded patients list
+      const filtered = patients.filter((p) => {
+        // Search by full name (case-insensitive, partial match)
+        const nameMatch = p.fullName.toLowerCase().includes(searchQuery);
+
+        // Search by phone (remove spaces and special characters for comparison)
+        const patientPhone = p.phone.replace(/[\s\-\(\)]/g, "");
+        const queryPhone = searchQuery.replace(/[\s\-\(\)]/g, "");
+        const phoneMatch = patientPhone.includes(queryPhone);
+
+        // Search by email (case-insensitive)
+        const emailMatch =
+          p.email && p.email.toLowerCase().includes(searchQuery);
+
+        // Search by MRN (case-insensitive)
+        const mrnMatch = p.mrn && p.mrn.toLowerCase().includes(searchQuery);
+
+        return nameMatch || phoneMatch || emailMatch || mrnMatch;
+      });
+
+      console.log(
+        `✅ Found ${filtered.length} matching patients:`,
+        filtered.map((p) => p.fullName),
+      );
+
       setPatientSearchResults(filtered);
     } catch (error: any) {
+      console.error("Search error:", error);
       toast.error("Failed to search patients");
     } finally {
       setIsSearchingPatient(false);
@@ -154,7 +185,7 @@ const BookAppointmentPage: React.FC = () => {
 
   const handlePatientSelect = (patient: Patient) => {
     setSelectedPatient(patient.userId);
-    setPatientSearchQuery(patient.fullName);
+    setPatientSearchQuery(""); // Clear search query after selection
     setPatientSearchResults([]);
   };
 
@@ -276,28 +307,12 @@ const BookAppointmentPage: React.FC = () => {
         patient_notes: patientNotes, // Use patient_notes field instead of notes
       });
 
-      toast.success("Appointment booked successfully!");
+      toast.success(
+        "Appointment booked successfully! Payment link sent to patient via WhatsApp.",
+      );
 
       // Reset form
-      setCurrentStep(1);
-      setSelectedCentre("");
-      setSelectedClinician("");
-      setSelectedDate("");
-      setSelectedSlot(null);
-      setSessionType("IN_PERSON");
-      setSelectedPatient("");
-      setPatientSearchQuery("");
-      setPatientSearchResults([]);
-      setShowCreatePatient(true);
-      setNewPatient({
-        firstName: "",
-        lastName: "",
-        phone: "",
-        email: "",
-        age: "",
-        gender: "",
-      });
-      setPatientNotes(""); // Reset patient notes
+      resetForm();
     } catch (error: any) {
       toast.error(
         error.response?.data?.message || "Failed to book appointment",
@@ -305,6 +320,101 @@ const BookAppointmentPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDirectPaymentSubmit = async () => {
+    try {
+      setConfirmingDirectPayment(true);
+
+      // Create patient if new
+      let patientId = selectedPatient;
+      if (!patientId && newPatient.firstName) {
+        const fullName =
+          `${newPatient.firstName} ${newPatient.lastName}`.trim();
+        const patient = await patientService.createPatient({
+          fullName: fullName,
+          phone: newPatient.phone,
+          email: newPatient.email || undefined,
+          dateOfBirth: newPatient.age
+            ? new Date(
+                new Date().getFullYear() - parseInt(newPatient.age),
+                0,
+                1,
+              )
+                .toISOString()
+                .split("T")[0]
+            : undefined,
+          gender: newPatient.gender
+            ? (newPatient.gender as "male" | "female" | "other")
+            : undefined,
+        });
+        patientId = patient.userId;
+      }
+
+      if (!selectedSlot) {
+        toast.error("No slot selected");
+        return;
+      }
+
+      // Book appointment
+      const appointment = await appointmentService.createAppointment({
+        patient_id: parseInt(patientId),
+        clinician_id: parseInt(selectedClinician),
+        centre_id: parseInt(selectedCentre),
+        appointment_type: sessionType,
+        scheduled_start_at: new Date(
+          `${selectedSlot.date}T${selectedSlot.startTime}`,
+        ).toISOString(),
+        duration_minutes:
+          parseInt(selectedSlot.endTime.split(":")[0]) * 60 +
+          parseInt(selectedSlot.endTime.split(":")[1]) -
+          (parseInt(selectedSlot.startTime.split(":")[0]) * 60 +
+            parseInt(selectedSlot.startTime.split(":")[1])),
+        patient_notes: patientNotes,
+      });
+
+      // Confirm direct payment
+      await appointmentService.confirmDirectPayment(
+        typeof appointment.id === "string"
+          ? parseInt(appointment.id)
+          : appointment.id,
+        directPaymentMethod,
+      );
+
+      toast.success(
+        `Appointment confirmed with ${directPaymentMethod} payment!`,
+      );
+      setShowDirectPaymentModal(false);
+
+      // Reset form
+      resetForm();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to confirm payment");
+    } finally {
+      setConfirmingDirectPayment(false);
+    }
+  };
+
+  const resetForm = () => {
+    setCurrentStep(1);
+    setSelectedCentre("");
+    setSelectedClinician("");
+    setSelectedDate("");
+    setSelectedSlot(null);
+    setSessionType("IN_PERSON");
+    setSelectedPatient("");
+    setPatientSearchQuery("");
+    setPatientSearchResults([]);
+    setShowCreatePatient(true);
+    setNewPatient({
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      age: "",
+      gender: "",
+    });
+    setPatientNotes("");
   };
 
   const steps = [
@@ -900,17 +1010,113 @@ const BookAppointmentPage: React.FC = () => {
               <ChevronRight size={20} />
             </Button>
           ) : (
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              loading={loading}
-              className="flex-1"
-            >
-              Confirm Booking
-            </Button>
+            <div className="flex-1 flex flex-col gap-3">
+              <Button
+                variant="primary"
+                onClick={handleSubmit}
+                loading={loading}
+                className="w-full"
+              >
+                Confirm: Send Payment Link
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setShowDirectPaymentModal(true)}
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700 text-white border-green-600"
+              >
+                Confirm: Pay via Cash/Card/UPI
+              </Button>
+            </div>
           )}
         </div>
       </Card>
+
+      {/* Direct Payment Modal */}
+      {showDirectPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-white mb-4">
+              Confirm Direct Payment
+            </h3>
+            <p className="text-slate-300 mb-6">
+              Patient is paying directly. Select payment method and confirm:
+            </p>
+
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => setDirectPaymentMethod("CASH")}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left transition-all
+                  ${
+                    directPaymentMethod === "CASH"
+                      ? "border-miboTeal bg-miboTeal/10 text-white"
+                      : "border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500"
+                  }
+                `}
+              >
+                <div className="font-semibold">💵 Cash Payment</div>
+                <div className="text-sm text-slate-400">
+                  Patient paid in cash at front desk
+                </div>
+              </button>
+
+              <button
+                onClick={() => setDirectPaymentMethod("CARD")}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left transition-all
+                  ${
+                    directPaymentMethod === "CARD"
+                      ? "border-miboTeal bg-miboTeal/10 text-white"
+                      : "border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500"
+                  }
+                `}
+              >
+                <div className="font-semibold">💳 Card Payment</div>
+                <div className="text-sm text-slate-400">
+                  Patient paid via debit/credit card
+                </div>
+              </button>
+
+              <button
+                onClick={() => setDirectPaymentMethod("UPI")}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left transition-all
+                  ${
+                    directPaymentMethod === "UPI"
+                      ? "border-miboTeal bg-miboTeal/10 text-white"
+                      : "border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500"
+                  }
+                `}
+              >
+                <div className="font-semibold">📱 UPI Payment</div>
+                <div className="text-sm text-slate-400">
+                  Patient paid via UPI (PhonePe, Google Pay, etc.)
+                </div>
+              </button>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setShowDirectPaymentModal(false)}
+                disabled={confirmingDirectPayment}
+                className="flex-1"
+              >
+                Close
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleDirectPaymentSubmit}
+                loading={confirmingDirectPayment}
+                className="flex-1"
+              >
+                Confirm Payment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

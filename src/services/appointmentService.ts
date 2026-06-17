@@ -140,6 +140,18 @@ class AppointmentService {
     return response.data.data || response.data;
   }
 
+  // Confirm direct payment (CASH/CARD/UPI) at front desk
+  async confirmDirectPayment(
+    appointmentId: number,
+    paymentMethod: "CASH" | "CARD" | "UPI",
+  ): Promise<any> {
+    const response = await api.post(
+      `/appointments/${appointmentId}/confirm-direct-payment`,
+      { paymentMethod },
+    );
+    return response.data.data || response.data;
+  }
+
   // Start a session
   async startSession(appointmentId: number): Promise<Appointment> {
     const response = await api.post(
