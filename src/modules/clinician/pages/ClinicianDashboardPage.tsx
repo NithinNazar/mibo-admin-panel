@@ -121,6 +121,15 @@ const ClinicianDashboardPage: React.FC = () => {
     }
   };
 
+  const handleStatusBoxClick = (status: string) => {
+    // Toggle filter: if clicking the same status, clear filter
+    if (statusFilter === status) {
+      setStatusFilter("ALL");
+    } else {
+      setStatusFilter(status);
+    }
+  };
+
   const handleDateRangeChange = (start: Date, end: Date) => {
     setSelectedStartDate(start);
     setSelectedEndDate(end);
@@ -188,81 +197,133 @@ const ClinicianDashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Now Clickable Filters */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-lg p-3 hover:border-slate-600 transition-colors">
+        {/* Total */}
+        <button
+          onClick={() => handleStatusBoxClick("ALL")}
+          className={`bg-slate-800/60 border rounded-lg p-3 transition-all text-left ${
+            statusFilter === "ALL"
+              ? "border-slate-400 ring-2 ring-slate-400/50 shadow-lg scale-105"
+              : "border-slate-700/60 hover:border-slate-600 hover:scale-102"
+          }`}
+        >
           <div className="text-slate-400 text-[10px] uppercase mb-1 font-semibold tracking-wider">
             Total
           </div>
           <div className="text-2xl font-bold text-white">{stats.total}</div>
-        </div>
-        <div className="bg-slate-800/60 border border-amber-600/40 rounded-lg p-3 hover:border-amber-500/60 transition-colors">
+          {statusFilter === "ALL" && (
+            <div className="text-[9px] text-slate-400 mt-1">
+              ● Active Filter
+            </div>
+          )}
+        </button>
+
+        {/* Waiting */}
+        <button
+          onClick={() => handleStatusBoxClick("WAITING")}
+          className={`bg-slate-800/60 border rounded-lg p-3 transition-all text-left ${
+            statusFilter === "WAITING"
+              ? "border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/20 scale-105"
+              : "border-amber-600/40 hover:border-amber-500/60 hover:scale-102"
+          }`}
+        >
           <div className="text-amber-400 text-[10px] uppercase mb-1 font-semibold tracking-wider">
             Waiting
           </div>
           <div className="text-2xl font-bold text-amber-300">
             {stats.waiting}
           </div>
-        </div>
-        <div className="bg-slate-800/60 border border-violet-600/40 rounded-lg p-3 hover:border-violet-500/60 transition-colors">
+          {statusFilter === "WAITING" && (
+            <div className="text-[9px] text-amber-400 mt-1">
+              ● Active Filter
+            </div>
+          )}
+        </button>
+
+        {/* Ongoing */}
+        <button
+          onClick={() => handleStatusBoxClick("ONGOING")}
+          className={`bg-slate-800/60 border rounded-lg p-3 transition-all text-left ${
+            statusFilter === "ONGOING"
+              ? "border-violet-500 ring-2 ring-violet-400/50 shadow-lg shadow-violet-500/20 scale-105"
+              : "border-violet-600/40 hover:border-violet-500/60 hover:scale-102"
+          }`}
+        >
           <div className="text-violet-400 text-[10px] uppercase mb-1 font-semibold tracking-wider">
             Ongoing
           </div>
           <div className="text-2xl font-bold text-violet-300">
             {stats.ongoing}
           </div>
-        </div>
-        <div className="bg-slate-800/60 border border-sky-600/40 rounded-lg p-3 hover:border-sky-500/60 transition-colors">
+          {statusFilter === "ONGOING" && (
+            <div className="text-[9px] text-violet-400 mt-1">
+              ● Active Filter
+            </div>
+          )}
+        </button>
+
+        {/* Confirmed */}
+        <button
+          onClick={() => handleStatusBoxClick("CONFIRMED")}
+          className={`bg-slate-800/60 border rounded-lg p-3 transition-all text-left ${
+            statusFilter === "CONFIRMED"
+              ? "border-sky-500 ring-2 ring-sky-400/50 shadow-lg shadow-sky-500/20 scale-105"
+              : "border-sky-600/40 hover:border-sky-500/60 hover:scale-102"
+          }`}
+        >
           <div className="text-sky-400 text-[10px] uppercase mb-1 font-semibold tracking-wider">
             Confirmed
           </div>
           <div className="text-2xl font-bold text-sky-300">
             {stats.confirmed}
           </div>
-        </div>
-        <div className="bg-slate-800/60 border border-emerald-600/40 rounded-lg p-3 hover:border-emerald-500/60 transition-colors">
+          {statusFilter === "CONFIRMED" && (
+            <div className="text-[9px] text-sky-400 mt-1">● Active Filter</div>
+          )}
+        </button>
+
+        {/* Completed */}
+        <button
+          onClick={() => handleStatusBoxClick("COMPLETED")}
+          className={`bg-slate-800/60 border rounded-lg p-3 transition-all text-left ${
+            statusFilter === "COMPLETED"
+              ? "border-emerald-500 ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20 scale-105"
+              : "border-emerald-600/40 hover:border-emerald-500/60 hover:scale-102"
+          }`}
+        >
           <div className="text-emerald-400 text-[10px] uppercase mb-1 font-semibold tracking-wider">
             Completed
           </div>
           <div className="text-2xl font-bold text-emerald-300">
             {stats.completed}
           </div>
-        </div>
-        <div className="bg-slate-800/60 border border-rose-600/40 rounded-lg p-3 hover:border-rose-500/60 transition-colors">
+          {statusFilter === "COMPLETED" && (
+            <div className="text-[9px] text-emerald-400 mt-1">
+              ● Active Filter
+            </div>
+          )}
+        </button>
+
+        {/* Cancelled */}
+        <button
+          onClick={() => handleStatusBoxClick("CANCELLED")}
+          className={`bg-slate-800/60 border rounded-lg p-3 transition-all text-left ${
+            statusFilter === "CANCELLED"
+              ? "border-rose-500 ring-2 ring-rose-400/50 shadow-lg shadow-rose-500/20 scale-105"
+              : "border-rose-600/40 hover:border-rose-500/60 hover:scale-102"
+          }`}
+        >
           <div className="text-rose-400 text-[10px] uppercase mb-1 font-semibold tracking-wider">
             Cancelled
           </div>
           <div className="text-2xl font-bold text-rose-300">
             {stats.cancelled}
           </div>
-        </div>
-      </div>
-
-      {/* Status Filter */}
-      <div className="mb-5 flex items-center gap-3">
-        <label className="text-slate-400 text-sm font-medium">
-          Filter by Status:
-        </label>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-slate-800/60 border border-slate-700/60 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-miboTeal focus:border-transparent hover:border-slate-600 transition-colors"
-        >
-          <option value="ALL">All Appointments ({stats.total})</option>
-          <option value="WAITING">Waiting ({stats.waiting})</option>
-          <option value="ONGOING">Ongoing ({stats.ongoing})</option>
-          <option value="CONFIRMED">Confirmed ({stats.confirmed})</option>
-          <option value="COMPLETED">Completed ({stats.completed})</option>
-          <option value="CANCELLED">Cancelled ({stats.cancelled})</option>
-        </select>
-        {statusFilter !== "ALL" && (
-          <button
-            onClick={() => setStatusFilter("ALL")}
-            className="text-slate-400 hover:text-white text-sm underline transition-colors"
-          >
-            Clear filter
-          </button>
-        )}
+          {statusFilter === "CANCELLED" && (
+            <div className="text-[9px] text-rose-400 mt-1">● Active Filter</div>
+          )}
+        </button>
       </div>
 
       {/* Appointments List */}

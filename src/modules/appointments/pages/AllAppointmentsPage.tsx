@@ -165,71 +165,78 @@ const AllAppointmentsPage: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...appointments];
 
-    // Combined search filter (patient name, phone, clinician name, MRN)
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+    // SEARCH HAS HIGHEST PRIORITY - ignores ALL time/date filters
+    if (searchTerm && searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(
         (apt) =>
-          apt.patient_name.toLowerCase().includes(search) ||
-          apt.patient_phone.includes(search) ||
-          apt.clinician_name.toLowerCase().includes(search) ||
+          (apt.patient_name &&
+            apt.patient_name.toLowerCase().includes(search)) ||
+          (apt.patient_phone && apt.patient_phone.includes(search)) ||
+          (apt.clinician_name &&
+            apt.clinician_name.toLowerCase().includes(search)) ||
           (apt.patient_mrn && apt.patient_mrn.toLowerCase().includes(search)),
       );
+    } else {
+      // NO SEARCH - Apply time filters normally
+      if (timeFilter !== "ALL") {
+        const now = new Date();
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        );
+
+        filtered = filtered.filter((apt) => {
+          const aptDate = new Date(apt.scheduled_start_at);
+          const aptDay = new Date(
+            aptDate.getFullYear(),
+            aptDate.getMonth(),
+            aptDate.getDate(),
+          );
+
+          if (timeFilter === "CURRENT") {
+            return aptDay.getTime() === today.getTime();
+          } else if (timeFilter === "PAST") {
+            return aptDay < today;
+          } else if (timeFilter === "UPCOMING") {
+            return aptDay > today;
+          }
+          return true;
+        });
+      }
+
+      // Date range filter - only when not searching and timeFilter is ALL
+      if (selectedStartDate && selectedEndDate && timeFilter === "ALL") {
+        const startDate = new Date(selectedStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(selectedEndDate);
+        endDate.setHours(23, 59, 59, 999);
+
+        filtered = filtered.filter((apt) => {
+          const aptDate = new Date(apt.scheduled_start_at);
+          return aptDate >= startDate && aptDate <= endDate;
+        });
+      }
     }
 
-    // Status filter
+    // Status filter - always apply (even when searching)
     if (statusFilter !== "ALL") {
       filtered = filtered.filter((apt) => apt.status === statusFilter);
     }
 
-    // Centre filter
+    // Centre filter - always apply (even when searching)
     if (centreFilter !== "ALL") {
-      filtered = filtered.filter((apt) => apt.centre_id === centreFilter);
+      filtered = filtered.filter(
+        (apt) => String(apt.centre_id) === String(centreFilter),
+      );
     }
 
-    // Clinician filter
+    // Clinician filter - always apply (even when searching)
     if (clinicianFilter !== "ALL") {
-      filtered = filtered.filter((apt) => apt.clinician_id === clinicianFilter);
-    }
-
-    // Time filter (current/past/upcoming)
-    if (timeFilter !== "ALL") {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at);
-        const aptDay = new Date(
-          aptDate.getFullYear(),
-          aptDate.getMonth(),
-          aptDate.getDate(),
-        );
-
-        if (timeFilter === "CURRENT") {
-          // Today's appointments
-          return aptDay.getTime() === today.getTime();
-        } else if (timeFilter === "PAST") {
-          // Past appointments (before today)
-          return aptDay < today;
-        } else if (timeFilter === "UPCOMING") {
-          // Future appointments (after today)
-          return aptDay > today;
-        }
-        return true;
-      });
-    }
-
-    // Date range filter (from DateRangeCalendar)
-    if (selectedStartDate && selectedEndDate && timeFilter === "ALL") {
-      const startDate = new Date(selectedStartDate);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(selectedEndDate);
-      endDate.setHours(23, 59, 59, 999);
-
-      filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduled_start_at);
-        return aptDate >= startDate && aptDate <= endDate;
-      });
+      filtered = filtered.filter(
+        (apt) => String(apt.clinician_id) === String(clinicianFilter),
+      );
     }
 
     // Apply sorting
@@ -843,6 +850,7 @@ const AllAppointmentsPage: React.FC = () => {
               appointments
             </div>
             <Table
+              key={`table-${filteredAppointments.length}-${searchTerm}-${timeFilter}-${statusFilter}-${centreFilter}-${clinicianFilter}`}
               columns={columns}
               data={filteredAppointments}
               keyExtractor={(apt) => apt.id.toString()}
