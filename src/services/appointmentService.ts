@@ -144,10 +144,19 @@ class AppointmentService {
   async confirmDirectPayment(
     appointmentId: number,
     paymentMethod: "CASH" | "CARD" | "UPI",
+    paymentNotes?: string,
   ): Promise<any> {
     const response = await api.post(
       `/appointments/${appointmentId}/confirm-direct-payment`,
-      { paymentMethod },
+      { paymentMethod, paymentNotes },
+    );
+    return response.data.data || response.data;
+  }
+
+  // Send Razorpay payment link to patient
+  async sendPaymentLink(appointmentId: number): Promise<any> {
+    const response = await api.post(
+      `/appointments/${appointmentId}/send-payment-link`,
     );
     return response.data.data || response.data;
   }

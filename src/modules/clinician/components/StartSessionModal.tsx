@@ -8,6 +8,8 @@ import {
   Video,
   FileText,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import appointmentService from "../../../services/appointmentService";
 
@@ -24,6 +26,7 @@ const StartSessionModal: React.FC<StartSessionModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPatientNotes, setShowPatientNotes] = useState(false);
 
   const handleStartSession = async () => {
     try {
@@ -106,16 +109,43 @@ const StartSessionModal: React.FC<StartSessionModalProps> = ({
             </div>
           </div>
 
-          {/* Patient Notes */}
+          {/* Patient Notes Section */}
           {appointment.patient_notes && (
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-              <h3 className="text-blue-300 font-semibold text-sm mb-1 flex items-center gap-2">
-                <FileText size={14} />
-                Patient Notes
-              </h3>
-              <p className="text-slate-300 text-xs">
-                {appointment.patient_notes}
-              </p>
+            <div className="bg-slate-800/50 rounded-lg border border-slate-700">
+              <button
+                onClick={() => setShowPatientNotes(!showPatientNotes)}
+                className="w-full flex items-center justify-between p-3 hover:bg-slate-700/30 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-blue-300">
+                  <FileText size={16} />
+                  <span className="text-sm font-semibold">Patient Notes</span>
+                </div>
+                {showPatientNotes ? (
+                  <ChevronUp size={16} className="text-slate-400" />
+                ) : (
+                  <ChevronDown size={16} className="text-slate-400" />
+                )}
+              </button>
+              {showPatientNotes && (
+                <div className="px-3 pb-3">
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                    <p className="text-slate-300 text-xs whitespace-pre-wrap leading-relaxed">
+                      {appointment.patient_notes}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!appointment.patient_notes && (
+            <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+              <div className="flex items-center gap-2 text-slate-500">
+                <FileText size={16} />
+                <span className="text-sm italic">
+                  No patient notes available
+                </span>
+              </div>
             </div>
           )}
 

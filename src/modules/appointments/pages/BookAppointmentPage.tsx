@@ -14,6 +14,7 @@ import {
   Video,
   Search,
   X,
+  AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import centreService from "../../../services/centreService";
@@ -42,7 +43,9 @@ const BookAppointmentPage: React.FC = () => {
   const [directPaymentMethod, setDirectPaymentMethod] = useState<
     "CASH" | "CARD" | "UPI"
   >("CASH");
+  const [directPaymentNotes, setDirectPaymentNotes] = useState("");
   const [confirmingDirectPayment, setConfirmingDirectPayment] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // Data states
   const [centres, setCentres] = useState<Centre[]>([]);
@@ -258,30 +261,49 @@ const BookAppointmentPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      setPhoneError(null); // Clear any previous error
 
       // Create patient if new
       let patientId = selectedPatient;
       if (!patientId && newPatient.firstName) {
         const fullName =
           `${newPatient.firstName} ${newPatient.lastName}`.trim();
-        const patient = await patientService.createPatient({
-          fullName: fullName,
-          phone: newPatient.phone,
-          email: newPatient.email || undefined,
-          dateOfBirth: newPatient.age
-            ? new Date(
-                new Date().getFullYear() - parseInt(newPatient.age),
-                0,
-                1,
-              )
-                .toISOString()
-                .split("T")[0]
-            : undefined,
-          gender: newPatient.gender
-            ? (newPatient.gender as "male" | "female" | "other")
-            : undefined,
-        });
-        patientId = patient.userId;
+        try {
+          const patient = await patientService.createPatient({
+            fullName: fullName,
+            phone: newPatient.phone,
+            email: newPatient.email || undefined,
+            dateOfBirth: newPatient.age
+              ? new Date(
+                  new Date().getFullYear() - parseInt(newPatient.age),
+                  0,
+                  1,
+                )
+                  .toISOString()
+                  .split("T")[0]
+              : undefined,
+            gender: newPatient.gender
+              ? (newPatient.gender as "male" | "female" | "other")
+              : undefined,
+          });
+          patientId = patient.userId;
+        } catch (patientError: any) {
+          // Check if it's a duplicate phone error
+          if (
+            patientError.response?.status === 409 ||
+            patientError.response?.data?.message?.includes(
+              "phone number already exists",
+            )
+          ) {
+            setPhoneError(
+              "This phone number is already registered. Please search for existing patient or use a different number.",
+            );
+            setLoading(false);
+            return;
+          }
+          // Re-throw other errors
+          throw patientError;
+        }
       }
 
       if (!selectedSlot) {
@@ -289,8 +311,8 @@ const BookAppointmentPage: React.FC = () => {
         return;
       }
 
-      // Book appointment
-      await appointmentService.createAppointment({
+      // Book appointment (status will be BOOKED, waiting for payment)
+      const appointment = await appointmentService.createAppointment({
         patient_id: parseInt(patientId),
         clinician_id: parseInt(selectedClinician),
         centre_id: parseInt(selectedCentre),
@@ -298,7 +320,6 @@ const BookAppointmentPage: React.FC = () => {
         scheduled_start_at: new Date(
           `${selectedSlot.date}T${selectedSlot.startTime}`,
         ).toISOString(),
-        //`${selectedSlot.date}T${selectedSlot.startTime}:00Z`,
         duration_minutes:
           parseInt(selectedSlot.endTime.split(":")[0]) * 60 +
           parseInt(selectedSlot.endTime.split(":")[1]) -
@@ -306,6 +327,13 @@ const BookAppointmentPage: React.FC = () => {
             parseInt(selectedSlot.startTime.split(":")[1])),
         patient_notes: patientNotes, // Use patient_notes field instead of notes
       });
+
+      // Send payment link to patient
+      await appointmentService.sendPaymentLink(
+        typeof appointment.id === "string"
+          ? parseInt(appointment.id)
+          : appointment.id,
+      );
 
       toast.success(
         "Appointment booked successfully! Payment link sent to patient via WhatsApp.",
@@ -325,30 +353,50 @@ const BookAppointmentPage: React.FC = () => {
   const handleDirectPaymentSubmit = async () => {
     try {
       setConfirmingDirectPayment(true);
+      setPhoneError(null); // Clear any previous error
 
       // Create patient if new
       let patientId = selectedPatient;
       if (!patientId && newPatient.firstName) {
         const fullName =
           `${newPatient.firstName} ${newPatient.lastName}`.trim();
-        const patient = await patientService.createPatient({
-          fullName: fullName,
-          phone: newPatient.phone,
-          email: newPatient.email || undefined,
-          dateOfBirth: newPatient.age
-            ? new Date(
-                new Date().getFullYear() - parseInt(newPatient.age),
-                0,
-                1,
-              )
-                .toISOString()
-                .split("T")[0]
-            : undefined,
-          gender: newPatient.gender
-            ? (newPatient.gender as "male" | "female" | "other")
-            : undefined,
-        });
-        patientId = patient.userId;
+        try {
+          const patient = await patientService.createPatient({
+            fullName: fullName,
+            phone: newPatient.phone,
+            email: newPatient.email || undefined,
+            dateOfBirth: newPatient.age
+              ? new Date(
+                  new Date().getFullYear() - parseInt(newPatient.age),
+                  0,
+                  1,
+                )
+                  .toISOString()
+                  .split("T")[0]
+              : undefined,
+            gender: newPatient.gender
+              ? (newPatient.gender as "male" | "female" | "other")
+              : undefined,
+          });
+          patientId = patient.userId;
+        } catch (patientError: any) {
+          // Check if it's a duplicate phone error
+          if (
+            patientError.response?.status === 409 ||
+            patientError.response?.data?.message?.includes(
+              "phone number already exists",
+            )
+          ) {
+            setPhoneError(
+              "This phone number is already registered. Please search for existing patient or use a different number.",
+            );
+            setConfirmingDirectPayment(false);
+            setShowDirectPaymentModal(false);
+            return;
+          }
+          // Re-throw other errors
+          throw patientError;
+        }
       }
 
       if (!selectedSlot) {
@@ -379,6 +427,7 @@ const BookAppointmentPage: React.FC = () => {
           ? parseInt(appointment.id)
           : appointment.id,
         directPaymentMethod,
+        directPaymentNotes,
       );
 
       toast.success(
@@ -415,6 +464,8 @@ const BookAppointmentPage: React.FC = () => {
       gender: "",
     });
     setPatientNotes("");
+    setDirectPaymentNotes("");
+    setPhoneError(null); // Clear phone error on reset
   };
 
   const steps = [
@@ -733,16 +784,25 @@ const BookAppointmentPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Phone Number"
-                    type="tel"
-                    placeholder="+91 9876543210"
-                    value={newPatient.phone}
-                    onChange={(e) =>
-                      setNewPatient({ ...newPatient, phone: e.target.value })
-                    }
-                    required
-                  />
+                  <div>
+                    {phoneError && (
+                      <div className="mb-2 p-2 bg-red-500/20 border border-red-500 rounded text-red-200 text-xs flex items-center gap-2">
+                        <AlertCircle size={14} />
+                        {phoneError}
+                      </div>
+                    )}
+                    <Input
+                      label="Phone Number"
+                      type="tel"
+                      placeholder="+91 9876543210"
+                      value={newPatient.phone}
+                      onChange={(e) => {
+                        setNewPatient({ ...newPatient, phone: e.target.value });
+                        setPhoneError(null); // Clear error when user types
+                      }}
+                      required
+                    />
+                  </div>
                   <Input
                     label="Email (Optional)"
                     type="email"
@@ -1094,6 +1154,24 @@ const BookAppointmentPage: React.FC = () => {
                   Patient paid via UPI (PhonePe, Google Pay, etc.)
                 </div>
               </button>
+            </div>
+
+            {/* Payment Notes Field */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Payment Notes (Optional)
+              </label>
+              <textarea
+                value={directPaymentNotes}
+                onChange={(e) => setDirectPaymentNotes(e.target.value)}
+                placeholder="Add any remarks or notes about this payment..."
+                rows={3}
+                maxLength={500}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-miboTeal resize-none"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                {directPaymentNotes.length}/500 characters
+              </p>
             </div>
 
             <div className="flex gap-3">

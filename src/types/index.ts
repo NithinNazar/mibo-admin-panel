@@ -91,6 +91,8 @@ export interface Appointment {
   created_at: Date;
   updated_at: Date;
   blocked_slot_id?: number;
+  payment_method?: string | null;
+  payment_notes?: string | null;
 }
 
 // Patient Types

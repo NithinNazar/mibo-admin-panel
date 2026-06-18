@@ -40,6 +40,9 @@ interface DashboardStats {
 const ClinicianDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<
+    AppointmentRow[]
+  >([]);
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     waiting: 0,
@@ -52,6 +55,7 @@ const ClinicianDashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<Date>(new Date());
   const [selectedEndDate, setSelectedEndDate] = useState<Date>(new Date());
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   // Modal states
   const [selectedAppointment, setSelectedAppointment] =
@@ -65,6 +69,10 @@ const ClinicianDashboardPage: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [selectedStartDate, selectedEndDate]);
+
+  useEffect(() => {
+    applyStatusFilter();
+  }, [appointments, statusFilter]);
 
   const fetchDashboardData = async () => {
     try {
@@ -89,6 +97,27 @@ const ClinicianDashboardPage: React.FC = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const applyStatusFilter = () => {
+    if (statusFilter === "ALL") {
+      setFilteredAppointments(appointments);
+    } else {
+      // Map filter values to actual appointment statuses
+      const statusMap: Record<string, string[]> = {
+        WAITING: ["BOOKED", "CONFIRMED"],
+        ONGOING: ["IN_PROGRESS"],
+        CONFIRMED: ["CONFIRMED"],
+        COMPLETED: ["COMPLETED"],
+        CANCELLED: ["CANCELLED"],
+      };
+
+      const statusesToFilter = statusMap[statusFilter] || [statusFilter];
+      const filtered = appointments.filter((apt) =>
+        statusesToFilter.includes(apt.status),
+      );
+      setFilteredAppointments(filtered);
     }
   };
 
@@ -209,20 +238,49 @@ const ClinicianDashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Status Filter */}
+      <div className="mb-5 flex items-center gap-3">
+        <label className="text-slate-400 text-sm font-medium">
+          Filter by Status:
+        </label>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="bg-slate-800/60 border border-slate-700/60 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-miboTeal focus:border-transparent hover:border-slate-600 transition-colors"
+        >
+          <option value="ALL">All Appointments ({stats.total})</option>
+          <option value="WAITING">Waiting ({stats.waiting})</option>
+          <option value="ONGOING">Ongoing ({stats.ongoing})</option>
+          <option value="CONFIRMED">Confirmed ({stats.confirmed})</option>
+          <option value="COMPLETED">Completed ({stats.completed})</option>
+          <option value="CANCELLED">Cancelled ({stats.cancelled})</option>
+        </select>
+        {statusFilter !== "ALL" && (
+          <button
+            onClick={() => setStatusFilter("ALL")}
+            className="text-slate-400 hover:text-white text-sm underline transition-colors"
+          >
+            Clear filter
+          </button>
+        )}
+      </div>
+
       {/* Appointments List */}
-      {appointments.length === 0 ? (
+      {filteredAppointments.length === 0 ? (
         <div className="text-center py-12 bg-slate-900/50 rounded-lg border border-slate-700/50">
           <Calendar size={48} className="mx-auto text-slate-600 mb-3" />
           <p className="text-lg text-slate-300 font-semibold mb-1">
             No appointments found
           </p>
           <p className="text-xs text-slate-500">
-            Try selecting a different date range
+            {statusFilter !== "ALL"
+              ? `No ${statusFilter.toLowerCase()} appointments for this date range`
+              : "Try selecting a different date range"}
           </p>
         </div>
       ) : (
         <AppointmentsTable
-          appointments={appointments}
+          appointments={filteredAppointments}
           onAppointmentClick={handleAppointmentClick}
         />
       )}

@@ -63,6 +63,11 @@ const AllAppointmentsPage: React.FC = () => {
   const [selectedNoteAppointment, setSelectedNoteAppointment] =
     useState<Appointment | null>(null);
 
+  // Payment note modal state
+  const [showPaymentNoteModal, setShowPaymentNoteModal] = useState(false);
+  const [selectedPaymentNoteAppointment, setSelectedPaymentNoteAppointment] =
+    useState<Appointment | null>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -529,6 +534,30 @@ const AllAppointmentsPage: React.FC = () => {
       ),
     },
     {
+      key: "payment_note",
+      header: "Payment Note",
+      render: (apt: Appointment) => (
+        <div>
+          {apt.payment_notes ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setSelectedPaymentNoteAppointment(apt);
+                setShowPaymentNoteModal(true);
+              }}
+              title="View payment note"
+            >
+              <FileText size={16} />
+              View Note
+            </Button>
+          ) : (
+            <span className="text-slate-500 italic text-sm">No note</span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: "booked_at",
       header: "Booked at",
       render: (apt: Appointment) => (
@@ -898,6 +927,88 @@ const AllAppointmentsPage: React.FC = () => {
                 onClick={() => {
                   setShowNoteModal(false);
                   setSelectedNoteAppointment(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Note Modal */}
+      {showPaymentNoteModal && selectedPaymentNoteAppointment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <FileText className="text-miboTeal" size={24} />
+                  Payment Note
+                </h2>
+                <p className="text-sm text-slate-400 mt-1">
+                  Appointment #{selectedPaymentNoteAppointment.id} •{" "}
+                  {selectedPaymentNoteAppointment.patient_name}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPaymentNoteModal(false);
+                  setSelectedPaymentNoteAppointment(null);
+                }}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-white/10">
+                <p className="text-white whitespace-pre-wrap">
+                  {selectedPaymentNoteAppointment.payment_notes}
+                </p>
+              </div>
+
+              {/* Payment Details */}
+              <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-400">Payment Method</p>
+                  <p className="text-white font-medium">
+                    {selectedPaymentNoteAppointment.payment_method || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Patient</p>
+                  <p className="text-white font-medium">
+                    {selectedPaymentNoteAppointment.patient_name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Date & Time</p>
+                  <p className="text-white font-medium">
+                    {new Date(
+                      selectedPaymentNoteAppointment.scheduled_start_at,
+                    ).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Status</p>
+                  <p className="text-white font-medium">
+                    {selectedPaymentNoteAppointment.status}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t border-white/10">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowPaymentNoteModal(false);
+                  setSelectedPaymentNoteAppointment(null);
                 }}
               >
                 Close
