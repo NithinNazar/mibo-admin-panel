@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import Card from "../../../components/ui/Card";
@@ -22,6 +22,23 @@ const LoginPage: React.FC = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Load remembered credentials on mount
+  useEffect(() => {
+    const rememberedPhone = localStorage.getItem("rememberedPhone");
+    const rememberedUsername = localStorage.getItem("rememberedUsername");
+
+    if (rememberedPhone) {
+      setPhone(rememberedPhone);
+      setRememberMe(true);
+    }
+
+    if (rememberedUsername) {
+      setUsername(rememberedUsername);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSendOTP = async () => {
     if (!phone) {
@@ -54,6 +71,21 @@ const LoginPage: React.FC = () => {
 
       console.log("=== Login Attempt ===");
       console.log("Auth Method:", authMethod);
+
+      // Save credentials if "Remember Me" is checked
+      if (rememberMe) {
+        if (authMethod === "username-password") {
+          localStorage.setItem("rememberedUsername", username);
+          localStorage.removeItem("rememberedPhone");
+        } else {
+          localStorage.setItem("rememberedPhone", phone);
+          localStorage.removeItem("rememberedUsername");
+        }
+      } else {
+        // Clear remembered credentials if unchecked
+        localStorage.removeItem("rememberedPhone");
+        localStorage.removeItem("rememberedUsername");
+      }
 
       if (authMethod === "phone-otp") {
         if (!phone || !otp) {
@@ -239,6 +271,24 @@ const LoginPage: React.FC = () => {
                     maxLength={6}
                     icon={<KeyRound size={18} />}
                   />
+
+                  {/* Remember Me Checkbox */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="rememberMe"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 text-miboTeal bg-gray-700 border-gray-600 rounded focus:ring-miboTeal focus:ring-2"
+                    />
+                    <label
+                      htmlFor="rememberMe"
+                      className="ml-2 text-sm text-slate-300 cursor-pointer"
+                    >
+                      Remember my phone number
+                    </label>
+                  </div>
+
                   <Button
                     type="submit"
                     variant="primary"
@@ -279,6 +329,24 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 icon={<Lock size={18} />}
               />
+
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-miboTeal bg-gray-700 border-gray-600 rounded focus:ring-miboTeal focus:ring-2"
+                />
+                <label
+                  htmlFor="rememberMe"
+                  className="ml-2 text-sm text-slate-300 cursor-pointer"
+                >
+                  Remember my phone number
+                </label>
+              </div>
+
               <Button
                 type="submit"
                 variant="primary"
@@ -310,6 +378,24 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 icon={<Lock size={18} />}
               />
+
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-miboTeal bg-gray-700 border-gray-600 rounded focus:ring-miboTeal focus:ring-2"
+                />
+                <label
+                  htmlFor="rememberMe"
+                  className="ml-2 text-sm text-slate-300 cursor-pointer"
+                >
+                  Remember my username
+                </label>
+              </div>
+
               <Button
                 type="submit"
                 variant="primary"
