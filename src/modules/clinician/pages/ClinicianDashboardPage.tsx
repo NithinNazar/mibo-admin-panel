@@ -90,7 +90,6 @@ const ClinicianDashboardPage: React.FC = () => {
       setStats(statsResponse);
       setAppointments(appointmentsResponse);
     } catch (error: any) {
-      console.error("Failed to fetch dashboard data:", error);
       setError(
         error.response?.data?.message ||
           "Failed to load dashboard. Please try again.",
